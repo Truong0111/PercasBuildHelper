@@ -89,7 +89,7 @@ namespace Percas.Editor
         public void ResetTimeSettings()
         {
             TimeScale = 1f;
-            FixedDeltaTime = 1f / 60f;
+            FixedDeltaTime = 0.02f;
             TargetFrameRate = 60;
             Apply();
         }
