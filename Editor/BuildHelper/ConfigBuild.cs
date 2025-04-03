@@ -3,7 +3,6 @@ using System.IO;
 using System.Linq;
 using UnityEditor;
 using System.Diagnostics;
-using DG.DemiEditor;
 using UnityEditor.Android;
 using UnityEngine;
 using Application = UnityEngine.Application;
@@ -31,6 +30,11 @@ namespace Percas.Editor
         public static void OpenFileBuild()
         {
             string path = Path.Combine(Application.dataPath, "../Builds");
+            if (!Directory.Exists(path))
+            {
+                Directory.CreateDirectory(path);
+            }
+
             Process proc = new Process();
             proc.StartInfo.FileName = path;
             proc.Start();
@@ -79,7 +83,7 @@ namespace Percas.Editor
                 AndroidExternalToolsSettings.jdkRootPath,
 #endif
                 @"bin\java");
- 
+
             Debug.Assert(Directory.Exists(Directory.GetDirectoryRoot(javaPath)),
                 "Project does not provide a valid java path. " +
                 "Check if you are using Unity recommended JDK in External Tools. " +
@@ -92,7 +96,7 @@ namespace Percas.Editor
             bundleToolPath = Directory.GetFiles(bundleToolPath, "bundletool*.jar", SearchOption.TopDirectoryOnly)
                 .FirstOrDefault();
 
-            Debug.Assert(!bundleToolPath.IsNullOrEmpty(), "Project does not support Android");
+            Debug.Assert(!string.IsNullOrEmpty(bundleToolPath), "Project does not support Android");
 
             // Running java command to execute bundle tool and build apks file
             string buildApksCmd =
@@ -221,9 +225,13 @@ namespace Percas.Editor
             }
 #endif
 #if UNITY_ANDROID
-            PlayerSettings.Android.useCustomKeystore = true;
+            PlayerSettings.Android.useCustomKeystore = PercasConfigSO.UseCustomKeystore;
             PlayerSettings.Android.bundleVersionCode = PercasConfigSO.VersionCode;
-            PlayerSettings.Android.keystoreName = Constants.Path.KeyStore;
+            if (PercasConfigSO.UseCustomKeystore)
+            {
+                PlayerSettings.Android.keystoreName = PercasConfigSO.CustomKeystorePath;
+            }
+
             PlayerSettings.Android.keyaliasName = PercasConfigSO.AliasName;
             PlayerSettings.Android.keyaliasPass = PercasConfigSO.GetKeyStore();
             PlayerSettings.Android.keystorePass = PercasConfigSO.GetKeyStore();

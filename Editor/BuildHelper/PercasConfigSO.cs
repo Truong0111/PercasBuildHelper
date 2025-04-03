@@ -1,13 +1,19 @@
 ﻿using System;
 using System.IO;
 using System.Text.RegularExpressions;
-using DG.DemiEditor;
 using Unity.Collections;
 using UnityEditor;
 using UnityEngine;
 
 namespace Percas.Editor
 {
+    public enum VersionCodeType
+    {
+        Increase,
+        DateTime,
+        Semantic
+    }
+
     public class PercasConfigSO : ScriptableObject
     {
         [field: SerializeField] public string ProductName { get; set; }
@@ -15,25 +21,16 @@ namespace Percas.Editor
         [field: SerializeField] public string AliasName { get; set; }
         [field: SerializeField] public bool UsePackageNameForPass { get; set; } = true;
         [field: SerializeField] public string KeyStorePass { get; set; }
+        [field: SerializeField] public bool UseCustomKeystore { get; set; } = true;
+        [field: SerializeField] public string CustomKeystorePath { get; set; } = Constants.Path.KeyStore;
+        [field: SerializeField] public bool SplitApplicationBinary { get; set; } = false;
+        [field: SerializeField] public VersionCodeType VersionCodeType { get; set; } = VersionCodeType.Increase;
         [field: SerializeField, Min(0)] public int MajorVersion { get; set; } = 0;
         [field: SerializeField, Min(0)] public int Version { get; set; } = 1;
-
-        [field: Tooltip(
-            "Version Name is formatted as {Major.Minor.Patch}.\n" +
-            "For more information, visit https://docs.unity3d.com/Manual/upm-semver.html")]
-        [field: SerializeField, ReadOnly]
-        public string VersionName { get; set; } = "0.0.1";
-
-        [field: Tooltip(
-            "Version Code is formatted based on version name.\n" +
-            "For examples:\n" +
-            "\"2.3.11\" becomes version code 20311\n" +
-            "\"3.0.0\" becomes version code 30000")]
-        [field: SerializeField, ReadOnly]
-        public int VersionCode { get; set; } = 1;
-
+        [field: SerializeField, ReadOnly] public string VersionName { get; set; } = "0.0.1";
+        [field: SerializeField, ReadOnly] public int VersionCode { get; set; } = 1;
         [field: SerializeField] public Texture2D IconTexture { get; set; }
-        
+
         private const string PercasConfigFileName = "PercasConfig";
         private const string PercasConfigResDir = "Assets/Percas";
         private const string PercasConfigFileExtension = ".asset";
@@ -65,23 +62,24 @@ namespace Percas.Editor
         private void OnEnable()
         {
             ProductName = PlayerSettings.productName;
-            if (ProductName.IsNullOrEmpty()) ProductName = Constants.DefaultProductName;
+            if (string.IsNullOrEmpty(ProductName)) ProductName = Constants.DefaultProductName;
 #if UNITY_IOS || UNITY_ANDROID
             PackageName = PlayerSettings.applicationIdentifier;
-            if (PackageName.IsNullOrEmpty()) PackageName = Constants.DefaultPackageName;
+            if (string.IsNullOrEmpty(PackageName)) PackageName = Constants.DefaultPackageName;
 #endif
 #if UNITY_ANDROID
             PlayerSettings.Android.useCustomKeystore = true;
 
             AliasName = PlayerSettings.Android.keyaliasName;
-            if (AliasName.IsNullOrEmpty()) AliasName = Constants.DefaultAlias;
+            if (string.IsNullOrEmpty(AliasName)) AliasName = Constants.DefaultAlias;
 #endif
         }
 
         public void Apply()
         {
-            AssetDatabase.SaveAssets();
+            UpdateVersionCodeAndNameBasedOnVersion();
             SetValueToPlayerSetting();
+            AssetDatabase.SaveAssets();
         }
 
         public string GetKeyStore()
@@ -101,36 +99,50 @@ namespace Percas.Editor
 
             PlayerSettings.productName = ProductName;
             PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Android, PackageName);
+#if UNITY_ANDROID
+            PlayerSettings.Android.bundleVersionCode = VersionCode;
+            PlayerSettings.bundleVersion = VersionName;
+            PlayerSettings.Android.useCustomKeystore = UseCustomKeystore;
+            if (UseCustomKeystore)
+            {
+                PlayerSettings.Android.keystoreName = CustomKeystorePath;
+            }
+
+            PlayerSettings.Android.keyaliasName = AliasName;
+            PlayerSettings.Android.keyaliasPass = GetKeyStore();
+            PlayerSettings.Android.keystorePass = GetKeyStore();
+            PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64 | AndroidArchitecture.ARMv7;
+            PlayerSettings.Android.useAPKExpansionFiles = SplitApplicationBinary;
+#endif
         }
 
-        public void IncreaseVersion()
+        public void OnVersionChanged()
         {
             if (!IsValidVersionCode() || !IsValidVersionName())
             {
                 throw new InvalidOperationException($"Invalid version info: {VersionName} ({VersionCode})");
             }
 
-            Version++;
             UpdateVersionCodeAndNameBasedOnVersion();
+        }
+
+        public void IncreaseVersion()
+        {
+            Version++;
+            OnVersionChanged();
         }
 
         public void DecreaseVersion()
         {
-            if (!IsValidVersionCode() || !IsValidVersionName())
-            {
-                throw new InvalidOperationException(
-                    $"Version code or version name is invalid. \nversionName: {VersionName} \nversionCode: {VersionCode} ");
-            }
-
             Version--;
-            UpdateVersionCodeAndNameBasedOnVersion();
+            OnVersionChanged();
         }
 
         public void ResetVersion()
         {
             MajorVersion = 0;
             Version = 1;
-            UpdateVersionCodeAndNameBasedOnVersion();
+            OnVersionChanged();
         }
 
         private void UpdateVersionCodeAndNameBasedOnVersion()
@@ -142,7 +154,19 @@ namespace Percas.Editor
             }
 
             VersionName = $"{MajorVersion}.0.{Version}";
-            VersionCode = MajorVersion + Version;
+
+            switch (VersionCodeType)
+            {
+                case VersionCodeType.Increase:
+                    VersionCode = MajorVersion + Version;
+                    break;
+                case VersionCodeType.DateTime:
+                    VersionCode = int.Parse(DateTime.Now.ToString("ddMMyyyy"));
+                    break;
+                case VersionCodeType.Semantic:
+                    VersionCode = MajorVersion * 10000 + Version;
+                    break;
+            }
 
             ConfigBuild.FixSettingBuild();
         }
