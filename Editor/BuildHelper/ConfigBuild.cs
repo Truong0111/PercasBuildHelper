@@ -4,7 +4,6 @@ using System.Linq;
 using UnityEditor;
 using System.Diagnostics;
 using UnityEditor.Android;
-using UnityEngine;
 using Application = UnityEngine.Application;
 using Debug = UnityEngine.Debug;
 
@@ -13,17 +12,17 @@ namespace Percas.Editor
     public class ConfigBuild : EditorWindow
     {
 #pragma warning disable CS0414
-        static bool flagchange;
+        static bool _flagChange;
 #pragma warning restore CS0414
 
-        private static PercasConfigSO percasConfigSO;
+        private static PercasConfigSO _percasConfigSo;
 
-        public static PercasConfigSO PercasConfigSO
+        public static PercasConfigSO PercasConfigSo
         {
             get
             {
-                percasConfigSO ??= PercasConfigSO.LoadInstance();
-                return percasConfigSO;
+                _percasConfigSo ??= PercasConfigSO.LoadInstance();
+                return _percasConfigSo;
             }
         }
 
@@ -71,9 +70,9 @@ namespace Percas.Editor
             if (!File.Exists(aabPath)) return;
             string filename = Path.GetFileNameWithoutExtension(aabPath);
             string keystore = Application.dataPath + "/../" + PlayerSettings.Android.keystoreName;
-            string keystorePass = PercasConfigSO.GetKeyStore();
-            string keystoreAlias = PercasConfigSO.AliasName;
-            string keystoreAliasPass = PercasConfigSO.GetKeyStore();
+            string keystorePass = PercasConfigSo.GetKeyStore();
+            string keystoreAlias = PercasConfigSo.AliasName;
+            string keystoreAliasPass = PercasConfigSo.GetKeyStore();
 
             #region commands
 
@@ -141,7 +140,7 @@ namespace Percas.Editor
                 }
             }
 
-            string batFileName = Path.Combine(Path.GetDirectoryName(aabPath), "ExtractAabToApk.bat");
+            string batFileName = Path.Combine(Path.GetDirectoryName(aabPath) ?? string.Empty, "ExtractAabToApk.bat");
             using (StreamWriter sw = new StreamWriter(batFileName))
             {
                 if (sw.BaseStream.CanWrite)
@@ -155,15 +154,16 @@ namespace Percas.Editor
             }
         }
 
-        public static void BuildGame(bool final, BuildOptions buildOptions = BuildOptions.None)
+        public static void BuildGame(bool final, BuildOptions buildOptions = BuildOptions.None,
+            bool isCustomBuildFileName = false,
+            string buildFileName = "")
         {
             SetUpFinalBuild(final);
-            string filePath = GetFilePath();
+            string filePath = GetFilePath(isCustomBuildFileName, buildFileName);
             AddBuildFolder(filePath);
             FixSettingBuild();
             string[] levels = EditorBuildSettings.scenes.Where(x => x.enabled).Select(scene => scene.path).ToArray();
             var report = BuildPipeline.BuildPlayer(levels, filePath, BuildTarget.Android, buildOptions);
-            OpenFileBuild();
             SetUpFinalBuild(false);
             ConvertAabToApk(report.summary.outputPath);
         }
@@ -210,38 +210,45 @@ namespace Percas.Editor
 
         public static void FixSettingBuild()
         {
-            flagchange = false;
+            _flagChange = false;
 #if UNITY_IOS || UNITY_ANDROID
-            if (!PercasConfigSO.PackageName.Equals(PlayerSettings.applicationIdentifier))
+            if (!PercasConfigSo.PackageName.Equals(PlayerSettings.applicationIdentifier))
             {
-                PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Android, PercasConfigSO.PackageName);
-                flagchange = true;
+                PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Android, PercasConfigSo.PackageName);
+                _flagChange = true;
             }
 
-            if (!PercasConfigSO.VersionName.Equals(PlayerSettings.bundleVersion))
+            if (!PercasConfigSo.VersionName.Equals(PlayerSettings.bundleVersion))
             {
-                PlayerSettings.bundleVersion = PercasConfigSO.VersionName;
-                flagchange = true;
+                PlayerSettings.bundleVersion = PercasConfigSo.VersionName;
+                _flagChange = true;
             }
 #endif
 #if UNITY_ANDROID
-            PlayerSettings.Android.useCustomKeystore = PercasConfigSO.UseCustomKeystore;
-            PlayerSettings.Android.bundleVersionCode = PercasConfigSO.VersionCode;
-            if (PercasConfigSO.UseCustomKeystore)
+            PlayerSettings.Android.useCustomKeystore = PercasConfigSo.UseCustomKeystore;
+            PlayerSettings.Android.bundleVersionCode = PercasConfigSo.VersionCode;
+            if (PercasConfigSo.UseCustomKeystore)
             {
-                PlayerSettings.Android.keystoreName = PercasConfigSO.CustomKeystorePath;
+                PlayerSettings.Android.keystoreName = PercasConfigSo.CustomKeystorePath;
             }
 
-            PlayerSettings.Android.keyaliasName = PercasConfigSO.AliasName;
-            PlayerSettings.Android.keyaliasPass = PercasConfigSO.GetKeyStore();
-            PlayerSettings.Android.keystorePass = PercasConfigSO.GetKeyStore();
+            PlayerSettings.Android.keyaliasName = PercasConfigSo.AliasName;
+            PlayerSettings.Android.keyaliasPass = PercasConfigSo.GetKeyStore();
+            PlayerSettings.Android.keystorePass = PercasConfigSo.GetKeyStore();
             PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64 | AndroidArchitecture.ARMv7;
 #endif
-            PlayerSettings.productName = PercasConfigSO.ProductName;
+            PlayerSettings.productName = PercasConfigSo.ProductName;
         }
 
-        static string GetFilePath()
+        static string GetFilePath(bool isCustomBuildFileName = false, string buildFileName = "")
         {
+            if (isCustomBuildFileName)
+            {
+                return Path.Combine(Application.dataPath,
+                    $"../Builds/{buildFileName}." + 
+                    $"{(EditorUserBuildSettings.buildAppBundle ? "aab" : "apk")}");
+            }
+
             string gameName = GetValidFileName(PlayerSettings.productName);
             return Path.Combine(Application.dataPath,
                 $"../Builds/{gameName.Replace(" ", "")}_{DateTime.Now:HH-mm-ssTdd-MM-yyyy}." +

@@ -28,7 +28,8 @@ namespace Percas.Editor
         [field: SerializeField, Min(0)] public int MajorVersion { get; set; } = 0;
         [field: SerializeField, Min(0)] public int Version { get; set; } = 1;
         [field: SerializeField, ReadOnly] public string VersionName { get; set; } = "0.0.1";
-        [field: SerializeField, ReadOnly] public int VersionCode { get; set; } = 1;
+        [field: SerializeField] public bool IsUseCustomVersionCode { get; set; } = false;
+        [field: SerializeField] public int VersionCode { get; set; } = 1;
         [field: SerializeField] public Texture2D IconTexture { get; set; }
 
         private const string PercasConfigFileName = "PercasConfig";
@@ -155,19 +156,25 @@ namespace Percas.Editor
 
             VersionName = $"{MajorVersion}.0.{Version}";
 
-            switch (VersionCodeType)
+            if (IsUseCustomVersionCode)
             {
-                case VersionCodeType.Increase:
-                    VersionCode = MajorVersion + Version;
-                    break;
-                case VersionCodeType.DateTime:
-                    VersionCode = int.Parse(DateTime.Now.ToString("ddMMyyyy"));
-                    break;
-                case VersionCodeType.Semantic:
-                    VersionCode = MajorVersion * 10000 + Version;
-                    break;
             }
-
+            else
+            {
+                switch (VersionCodeType)
+                {
+                    case VersionCodeType.Increase:
+                        VersionCode = MajorVersion + Version;
+                        break;
+                    case VersionCodeType.DateTime:
+                        VersionCode = int.Parse(DateTime.Now.ToString("ddMMyyyy"));
+                        break;
+                    case VersionCodeType.Semantic:
+                        VersionCode = MajorVersion * 10000 + Version;
+                        break;
+                }
+            }
+            
             ConfigBuild.FixSettingBuild();
         }
 

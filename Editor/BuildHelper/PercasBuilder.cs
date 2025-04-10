@@ -12,28 +12,43 @@ namespace Percas.Editor
 {
     public class PercasBuilder : EditorWindow
     {
-        public enum BuildType
+        private enum BuildType
         {
             Mono2X,
             Mono2XCleanBuild,
             Final
         }
 
+        private bool isCustomBuildFileName = false;
+        private string buildFileName = "";
         private bool packageName;
         private bool splash;
         private bool icon;
         private string bypassChecklistPassword;
-        private bool test_Mono2x = true;
-        private bool test_Mono2x_Clean_Build;
-        private bool test_illcpp;
+        private bool testMono2X = true;
+        private bool testMono2XCleanBuild;
+        private bool testIllcpp;
         private bool final;
-        private string APK;
+        private string apk;
         private int selectedAPKIndex = 0;
         private BuildType currentBuildType = BuildType.Mono2X;
 
         public void OnGUI()
         {
             EditorGUILayout.Space(5);
+
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+            isCustomBuildFileName = EditorGUILayout.Toggle("Use custom name", isCustomBuildFileName);
+            if (isCustomBuildFileName)
+            {
+                buildFileName = EditorGUILayout.TextField("Build file name", buildFileName);
+            }
+            else
+            {
+                buildFileName = "";
+            }
+
+            EditorGUILayout.EndVertical();
 
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
             GUILayout.Label("Final Build Checklist", EditorStyles.boldLabel);
@@ -51,6 +66,7 @@ namespace Percas.Editor
             {
                 TestChecklist();
             }
+
             EditorGUILayout.EndVertical();
 
             EditorGUILayout.Space(10);
@@ -59,13 +75,13 @@ namespace Percas.Editor
             GUILayout.Label("Build Actions", EditorStyles.boldLabel);
             EditorGUILayout.Space(2);
 
-            bool previousTestMono2X = test_Mono2x;
-            test_Mono2x = EditorGUILayout.Toggle("Test Mono2x", test_Mono2x);
-            if (test_Mono2x && test_Mono2x != previousTestMono2X) SetBuildType(BuildType.Mono2X);
+            bool previousTestMono2X = testMono2X;
+            testMono2X = EditorGUILayout.Toggle("Test Mono2x", testMono2X);
+            if (testMono2X && testMono2X != previousTestMono2X) SetBuildType(BuildType.Mono2X);
 
-            bool previousCleanBuild = test_Mono2x_Clean_Build;
-            test_Mono2x_Clean_Build = EditorGUILayout.Toggle("Clean Build", test_Mono2x_Clean_Build);
-            if (test_Mono2x_Clean_Build && test_Mono2x_Clean_Build != previousCleanBuild)
+            bool previousCleanBuild = testMono2XCleanBuild;
+            testMono2XCleanBuild = EditorGUILayout.Toggle("Clean Build", testMono2XCleanBuild);
+            if (testMono2XCleanBuild && testMono2XCleanBuild != previousCleanBuild)
                 SetBuildType(BuildType.Mono2XCleanBuild);
 
             EditorGUILayout.Space(5);
@@ -79,6 +95,7 @@ namespace Percas.Editor
             {
                 Build();
             }
+
             EditorGUILayout.EndVertical();
 
             EditorGUILayout.Space(10);
@@ -103,6 +120,7 @@ namespace Percas.Editor
                 if (GUILayout.Button("Clean Build Folder", GUILayout.Height(25)))
                     CleanBuildFolder();
             }
+
             EditorGUILayout.EndVertical();
 
             EditorGUILayout.Space(10);
@@ -121,17 +139,17 @@ namespace Percas.Editor
             else
             {
                 selectedAPKIndex = Mathf.Clamp(selectedAPKIndex, 0, files.Length - 1);
-                
+
                 EditorGUI.BeginChangeCheck();
                 selectedAPKIndex = EditorGUILayout.Popup("APK File", selectedAPKIndex, files);
                 if (EditorGUI.EndChangeCheck())
                 {
-                    APK = files[selectedAPKIndex];
+                    apk = files[selectedAPKIndex];
                 }
 
                 if (GUILayout.Button("Install APK", GUILayout.Height(25)))
                 {
-                    APK = files[selectedAPKIndex];
+                    apk = files[selectedAPKIndex];
                     InstallAPK();
                 }
             }
@@ -141,6 +159,7 @@ namespace Percas.Editor
             {
                 OpenDebuggingPortToDevice();
             }
+
             EditorGUILayout.EndVertical();
         }
 
@@ -160,29 +179,9 @@ namespace Percas.Editor
         private void SetBuildType(BuildType type)
         {
             currentBuildType = type;
-            test_Mono2x = type == BuildType.Mono2X;
-            test_Mono2x_Clean_Build = type == BuildType.Mono2XCleanBuild;
+            testMono2X = type == BuildType.Mono2X;
+            testMono2XCleanBuild = type == BuildType.Mono2XCleanBuild;
             final = type == BuildType.Final;
-
-            // Apply build type specific settings
-            switch (type)
-            {
-                case BuildType.Mono2X:
-                    EditorUserBuildSettings.development = true;
-                    EditorUserBuildSettings.buildAppBundle = false;
-                    PlayerSettings.SetScriptingBackend(BuildTargetGroup.Android, ScriptingImplementation.Mono2x);
-                    break;
-                case BuildType.Mono2XCleanBuild:
-                    EditorUserBuildSettings.development = true;
-                    EditorUserBuildSettings.buildAppBundle = false;
-                    PlayerSettings.SetScriptingBackend(BuildTargetGroup.Android, ScriptingImplementation.Mono2x);
-                    break;
-                case BuildType.Final:
-                    EditorUserBuildSettings.development = false;
-                    EditorUserBuildSettings.buildAppBundle = true;
-                    PlayerSettings.SetScriptingBackend(BuildTargetGroup.Android, ScriptingImplementation.IL2CPP);
-                    break;
-            }
         }
 
         private void FixSettings()
@@ -210,8 +209,8 @@ namespace Percas.Editor
 
         private void Build()
         {
-            EditorUserBuildSettings.development = currentBuildType != BuildType.Final;
-            ConfigBuild.BuildGame(final, test_Mono2x_Clean_Build ? BuildOptions.CleanBuildCache : BuildOptions.None);
+            ConfigBuild.BuildGame(final, testMono2XCleanBuild ? BuildOptions.CleanBuildCache : BuildOptions.None,
+                isCustomBuildFileName, buildFileName);
         }
 
         protected void OnEnable()
@@ -220,12 +219,12 @@ namespace Percas.Editor
             if (files.Count > 0)
             {
                 selectedAPKIndex = 0;
-                APK = files[0];
+                apk = files[0];
             }
             else
             {
                 selectedAPKIndex = 0;
-                APK = string.Empty;
+                apk = string.Empty;
             }
         }
 
@@ -243,8 +242,8 @@ namespace Percas.Editor
         {
             var sdkRoot = AndroidExternalToolsSettings.sdkRootPath;
             string bundleToolPath = Path.Combine(sdkRoot, "platform-tools");
-            
-            var apkPath = "\"" + Directory.GetFiles(Application.dataPath + "/../Builds", APK + ".apk",
+
+            var apkPath = "\"" + Directory.GetFiles(Application.dataPath + "/../Builds", apk + ".apk",
                 SearchOption.AllDirectories)[0] + "\"";
 
             var process = new Process()
@@ -264,7 +263,7 @@ namespace Percas.Editor
             process.StandardInput.WriteLine("exit");
 
 
-            EditorUtility.DisplayProgressBar($"Installing {APK}...", "Please wait", 0);
+            EditorUtility.DisplayProgressBar($"Installing {apk}...", "Please wait", 0);
             try
             {
                 string output = process.StandardOutput.ReadToEnd();

@@ -1,8 +1,9 @@
 ﻿using UnityEngine;
 using UnityEditor;
 using System;
-using Unity.VisualScripting;
+using System.IO;
 using System.Reflection;
+using Percas.Helper;
 
 namespace Percas.Editor
 {
@@ -15,12 +16,12 @@ namespace Percas.Editor
             Utility
         }
 
-        private EditorTab _currentTab = EditorTab.Settings;
-        private PercasConfigSO _buildSettings;
-        private PercasUtilitySO _utilitySettings;
-        private PercasBuilder _percasBuilder;
-        private Vector2 _scrollPosition;
-        private bool _isRepainting = false;
+        private EditorTab currentTab = EditorTab.Settings;
+        private PercasConfigSO buildSettings;
+        private PercasUtilitySO utilitySettings;
+        private PercasBuilder percasBuilder;
+        private Vector2 scrollPosition;
+        private bool isRepainting = false;
 
         [MenuItem("Percas/Build Helper", priority = 0)]
         private static void ShowWindow()
@@ -45,9 +46,9 @@ namespace Percas.Editor
 
         private void OnEnable()
         {
-            _buildSettings = PercasConfigSO.LoadInstance();
-            _utilitySettings = PercasUtilitySO.LoadInstance();
-            _percasBuilder = CreateInstance<PercasBuilder>();
+            buildSettings = PercasConfigSO.LoadInstance();
+            utilitySettings = PercasUtilitySO.LoadInstance();
+            percasBuilder = CreateInstance<PercasBuilder>();
 
             Undo.undoRedoPerformed += OnUndoRedoPerformed;
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
@@ -74,25 +75,25 @@ namespace Percas.Editor
 
         private void StartContinuousRepaint()
         {
-            if (!_isRepainting)
+            if (!isRepainting)
             {
-                _isRepainting = true;
+                isRepainting = true;
                 EditorApplication.update += OnEditorUpdate;
             }
         }
 
         private void StopContinuousRepaint()
         {
-            if (_isRepainting)
+            if (isRepainting)
             {
-                _isRepainting = false;
+                isRepainting = false;
                 EditorApplication.update -= OnEditorUpdate;
             }
         }
 
         private void OnEditorUpdate()
         {
-            if (_isRepainting && _utilitySettings.ShowPerformanceStats)
+            if (isRepainting && utilitySettings.ShowPerformanceStats)
             {
                 Repaint();
             }
@@ -106,8 +107,8 @@ namespace Percas.Editor
         private void OnGUI()
         {
             EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
-            _currentTab = (EditorTab)GUILayout.Toolbar(
-                (int)_currentTab,
+            currentTab = (EditorTab)GUILayout.Toolbar(
+                (int)currentTab,
                 new[] { "Settings", "Build", "Utility" },
                 EditorStyles.toolbarButton
             );
@@ -115,9 +116,9 @@ namespace Percas.Editor
 
             EditorGUILayout.Space(5);
 
-            _scrollPosition = EditorGUILayout.BeginScrollView(_scrollPosition);
+            scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition);
 
-            switch (_currentTab)
+            switch (currentTab)
             {
                 case EditorTab.Settings:
                     RenderSettingsTab();
@@ -141,74 +142,112 @@ namespace Percas.Editor
             GUILayout.Label("Product Information", EditorStyles.boldLabel);
             EditorGUILayout.Space(2);
 
-            Undo.RecordObject(_buildSettings, "Change Product Name");
-            _buildSettings.ProductName = EditorGUILayout.TextField("Product Name", _buildSettings.ProductName);
-            EditorUtility.SetDirty(_buildSettings);
+            Undo.RecordObject(buildSettings, "Change Product Name");
+            buildSettings.ProductName = EditorGUILayout.TextField("Product Name", buildSettings.ProductName);
+            EditorUtility.SetDirty(buildSettings);
 
-            Undo.RecordObject(_buildSettings, "Change Package Name");
-            _buildSettings.PackageName = EditorGUILayout.TextField("Package Name", _buildSettings.PackageName);
-            EditorUtility.SetDirty(_buildSettings);
+            Undo.RecordObject(buildSettings, "Change Package Name");
+            buildSettings.PackageName = EditorGUILayout.TextField("Package Name", buildSettings.PackageName);
+            EditorUtility.SetDirty(buildSettings);
 
-            Undo.RecordObject(_buildSettings, "Change Alias Name");
-            _buildSettings.AliasName = EditorGUILayout.TextField("Alias Name", _buildSettings.AliasName);
-            EditorUtility.SetDirty(_buildSettings);
+            Undo.RecordObject(buildSettings, "Change Alias Name");
+            buildSettings.AliasName = EditorGUILayout.TextField("Alias Name", buildSettings.AliasName);
+            EditorUtility.SetDirty(buildSettings);
 
-            Undo.RecordObject(_buildSettings, "Change Package Name Pass");
-            _buildSettings.UsePackageNameForPass =
-                EditorGUILayout.Toggle("PackageName As Pass", _buildSettings.UsePackageNameForPass);
-            EditorUtility.SetDirty(_buildSettings);
+            Undo.RecordObject(buildSettings, "Change Package Name Pass");
+            buildSettings.UsePackageNameForPass =
+                EditorGUILayout.Toggle("PackageName As Pass", buildSettings.UsePackageNameForPass);
+            EditorUtility.SetDirty(buildSettings);
 
-            EditorGUI.BeginDisabledGroup(_buildSettings.UsePackageNameForPass);
-            Undo.RecordObject(_buildSettings, "Change Key Store Pass");
-            _buildSettings.KeyStorePass = EditorGUILayout.PasswordField("Key Store Pass", _buildSettings.KeyStorePass);
-            EditorUtility.SetDirty(_buildSettings);
+            EditorGUI.BeginDisabledGroup(buildSettings.UsePackageNameForPass);
+            Undo.RecordObject(buildSettings, "Change Key Store Pass");
+            buildSettings.KeyStorePass = EditorGUILayout.PasswordField("Key Store Pass", buildSettings.KeyStorePass);
+            EditorUtility.SetDirty(buildSettings);
             EditorGUI.EndDisabledGroup();
 
             EditorGUILayout.Space(5);
-            Undo.RecordObject(_buildSettings, "Change Custom Keystore");
-            _buildSettings.UseCustomKeystore =
-                EditorGUILayout.Toggle("Use Custom Keystore", _buildSettings.UseCustomKeystore);
-            EditorUtility.SetDirty(_buildSettings);
+            Undo.RecordObject(buildSettings, "Change Custom Keystore");
+            buildSettings.UseCustomKeystore =
+                EditorGUILayout.Toggle("Use Custom Keystore", buildSettings.UseCustomKeystore);
+            EditorUtility.SetDirty(buildSettings);
 
-            if (_buildSettings.UseCustomKeystore)
+            if (buildSettings.UseCustomKeystore)
             {
                 EditorGUI.BeginChangeCheck();
-                string newPath = _buildSettings.CustomKeystorePath;
+                string newPath = buildSettings.CustomKeystorePath;
                 using (new EditorGUILayout.HorizontalScope())
                 {
                     newPath = EditorGUILayout.TextField("Keystore Path", newPath);
                     if (GUILayout.Button("Browse", GUILayout.Width(60)))
                     {
-                        string path = EditorUtility.OpenFilePanel("Select Keystore File", "Assets", "keystore");
+                        string initialDir = "Assets";
+                        if (!string.IsNullOrEmpty(newPath))
+                        {
+                            if (newPath.StartsWith("Assets/"))
+                            {
+                                string fullPath = Path.Combine(Application.dataPath, newPath.Substring(7));
+                                if (Directory.Exists(Path.GetDirectoryName(fullPath)))
+                                {
+                                    initialDir = Path.GetDirectoryName(fullPath);
+                                }
+                            }
+                            else if (File.Exists(newPath) || Directory.Exists(Path.GetDirectoryName(newPath)))
+                            {
+                                initialDir = Path.GetDirectoryName(newPath);
+                            }
+                        }
+
+                        string path = EditorUtility.OpenFilePanel("Select Keystore File", initialDir, "keystore");
                         if (!string.IsNullOrEmpty(path))
                         {
-                            string relativePath = "Assets" + path.Substring(Application.dataPath.Length);
-                            newPath = relativePath;
+                            if (path.StartsWith(Application.dataPath))
+                            {
+                                string relativePath = "Assets" + path.Substring(Application.dataPath.Length);
+                                newPath = relativePath;
+                            }
+                            else
+                            {
+                                newPath = path;
+                            }
                         }
                     }
                 }
 
                 if (EditorGUI.EndChangeCheck())
                 {
-                    if (!newPath.StartsWith("Assets/"))
+                    if (string.IsNullOrEmpty(newPath))
                     {
-                        EditorUtility.DisplayDialog("Invalid Path", "Keystore path must start with 'Assets/'", "OK");
+                        EditorUtility.DisplayDialog("Invalid Path", "Keystore path cannot be empty", "OK");
                         return;
                     }
 
-                    Undo.RecordObject(_buildSettings, "Change Keystore Path");
-                    _buildSettings.CustomKeystorePath = newPath;
-                    EditorUtility.SetDirty(_buildSettings);
+                    if (!newPath.StartsWith("Assets/") && !File.Exists(newPath))
+                    {
+                        EditorUtility.DisplayDialog("Invalid Path", "Keystore file not found at specified path", "OK");
+                        return;
+                    }
+
+                    Undo.RecordObject(buildSettings, "Change Keystore Path");
+                    buildSettings.CustomKeystorePath = newPath;
+                    EditorUtility.SetDirty(buildSettings);
+                }
+
+                if (!string.IsNullOrEmpty(buildSettings.CustomKeystorePath) &&
+                    !buildSettings.CustomKeystorePath.StartsWith("Assets/"))
+                {
+                    EditorGUILayout.HelpBox(
+                        "Using an external keystore file. This might cause issues when sharing the project or building on other machines.",
+                        MessageType.Warning);
                 }
             }
 
             EditorGUILayout.Space(5);
-            Undo.RecordObject(_buildSettings, "Change Split Application Binary");
-            _buildSettings.SplitApplicationBinary =
-                EditorGUILayout.Toggle("Split Application Binary", _buildSettings.SplitApplicationBinary);
-            EditorUtility.SetDirty(_buildSettings);
+            Undo.RecordObject(buildSettings, "Change Split Application Binary");
+            buildSettings.SplitApplicationBinary =
+                EditorGUILayout.Toggle("Split Application Binary", buildSettings.SplitApplicationBinary);
+            EditorUtility.SetDirty(buildSettings);
 
-            if (_buildSettings.SplitApplicationBinary)
+            if (buildSettings.SplitApplicationBinary)
             {
                 EditorGUILayout.HelpBox(
                     "Split Application Binary will create separate APKs for different CPU architectures. This can reduce the final APK size but requires managing multiple APKs.",
@@ -224,48 +263,62 @@ namespace Percas.Editor
             EditorGUILayout.Space(2);
 
             EditorGUI.BeginChangeCheck();
-            Undo.RecordObject(_buildSettings, "Change Major Version");
-            _buildSettings.MajorVersion = EditorGUILayout.IntField("Major Version", _buildSettings.MajorVersion);
-            EditorUtility.SetDirty(_buildSettings);
+            Undo.RecordObject(buildSettings, "Change Major Version");
+            buildSettings.MajorVersion = EditorGUILayout.IntField("Major Version", buildSettings.MajorVersion);
+            EditorUtility.SetDirty(buildSettings);
 
-            Undo.RecordObject(_buildSettings, "Change Version");
-            _buildSettings.Version = EditorGUILayout.IntField("Version", _buildSettings.Version);
-            EditorUtility.SetDirty(_buildSettings);
+            Undo.RecordObject(buildSettings, "Change Version");
+            buildSettings.Version = EditorGUILayout.IntField("Version", buildSettings.Version);
+            EditorUtility.SetDirty(buildSettings);
 
-            Undo.RecordObject(_buildSettings, "Change Version Code Type");
-            _buildSettings.VersionCodeType =
-                (VersionCodeType)EditorGUILayout.EnumPopup("Version Code Type", _buildSettings.VersionCodeType);
-            EditorUtility.SetDirty(_buildSettings);
+            Undo.RecordObject(buildSettings, "Change Version Code Type");
+            buildSettings.VersionCodeType =
+                (VersionCodeType)EditorGUILayout.EnumPopup("Version Code Type", buildSettings.VersionCodeType);
+            EditorUtility.SetDirty(buildSettings);
 
             if (EditorGUI.EndChangeCheck())
             {
-                _buildSettings.OnVersionChanged();
+                buildSettings.OnVersionChanged();
             }
 
             EditorGUI.BeginDisabledGroup(true);
-            EditorGUILayout.TextField("Version Name", _buildSettings.VersionName);
-            EditorGUILayout.TextField("Version Code", _buildSettings.VersionCode.ToString());
+            EditorGUILayout.TextField("Version Name", buildSettings.VersionName);
             EditorGUI.EndDisabledGroup();
+
+            buildSettings.IsUseCustomVersionCode =
+                EditorGUILayout.Toggle("Use Custom VersionCode", buildSettings.IsUseCustomVersionCode);
+
+            if (buildSettings.IsUseCustomVersionCode)
+            {
+                buildSettings.VersionCode = EditorGUILayout.IntField("Version Code", buildSettings.VersionCode);
+                EditorUtility.SetDirty(buildSettings);
+            }
+            else
+            {
+                EditorGUI.BeginDisabledGroup(true);
+                EditorGUILayout.TextField("Version Code", buildSettings.VersionCode.ToString());
+                EditorGUI.EndDisabledGroup();
+            }
 
             EditorGUILayout.Space(5);
             using (new EditorGUILayout.HorizontalScope())
             {
                 if (GUILayout.Button("Increment Version", GUILayout.Height(25)))
                 {
-                    Undo.RecordObject(_buildSettings, "Increment Version");
-                    _buildSettings.IncreaseVersion();
+                    Undo.RecordObject(buildSettings, "Increment Version");
+                    buildSettings.IncreaseVersion();
                 }
 
                 if (GUILayout.Button("Decrement Version", GUILayout.Height(25)))
                 {
-                    Undo.RecordObject(_buildSettings, "Decrement Version");
-                    _buildSettings.DecreaseVersion();
+                    Undo.RecordObject(buildSettings, "Decrement Version");
+                    buildSettings.DecreaseVersion();
                 }
 
                 if (GUILayout.Button("Reset Version", GUILayout.Height(25)))
                 {
-                    Undo.RecordObject(_buildSettings, "Reset Version");
-                    _buildSettings.ResetVersion();
+                    Undo.RecordObject(buildSettings, "Reset Version");
+                    buildSettings.ResetVersion();
                 }
             }
 
@@ -277,11 +330,11 @@ namespace Percas.Editor
             GUILayout.Label("Application Icon", EditorStyles.boldLabel);
             EditorGUILayout.Space(2);
 
-            Undo.RecordObject(_buildSettings, "Change App Icon");
-            _buildSettings.IconTexture =
-                (Texture2D)EditorGUILayout.ObjectField("App Icon", _buildSettings.IconTexture, typeof(Texture2D),
+            Undo.RecordObject(buildSettings, "Change App Icon");
+            buildSettings.IconTexture =
+                (Texture2D)EditorGUILayout.ObjectField("App Icon", buildSettings.IconTexture, typeof(Texture2D),
                     false);
-            EditorUtility.SetDirty(_buildSettings);
+            EditorUtility.SetDirty(buildSettings);
             EditorGUILayout.EndVertical();
 
             EditorGUILayout.Space(10);
@@ -292,7 +345,7 @@ namespace Percas.Editor
 
             if (GUILayout.Button("Apply", GUILayout.Height(25)))
             {
-                _buildSettings.Apply();
+                buildSettings.Apply();
             }
 
             if (GUILayout.Button("Open Player Settings", GUILayout.Height(25)))
@@ -305,9 +358,9 @@ namespace Percas.Editor
 
         private void RenderBuildTab()
         {
-            if (_percasBuilder != null)
+            if (percasBuilder != null)
             {
-                _percasBuilder.OnGUI();
+                percasBuilder.OnGUI();
             }
         }
 
@@ -320,32 +373,33 @@ namespace Percas.Editor
             EditorGUILayout.Space(2);
 
             EditorGUI.BeginChangeCheck();
-            Undo.RecordObject(_utilitySettings, "Change Time Scale");
-            float timeScale = EditorGUILayout.FloatField("Time Scale", _utilitySettings.TimeScale);
+            Undo.RecordObject(utilitySettings, "Change Time Scale");
+            float timeScale = EditorGUILayout.FloatField("Time Scale", utilitySettings.TimeScale);
             if (EditorGUI.EndChangeCheck())
             {
-                _utilitySettings.TimeScale = timeScale;
-                EditorUtility.SetDirty(_utilitySettings);
+                utilitySettings.TimeScale = timeScale;
+                EditorUtility.SetDirty(utilitySettings);
             }
 
             EditorGUI.BeginChangeCheck();
-            Undo.RecordObject(_utilitySettings, "Change Fixed Delta Time");
-            float fixedDeltaTime = EditorGUILayout.FloatField("Fixed Delta Time", _utilitySettings.FixedDeltaTime);
+            Undo.RecordObject(utilitySettings, "Change Fixed Delta Time");
+            float fixedDeltaTime = EditorGUILayout.FloatField("Fixed Delta Time", utilitySettings.FixedDeltaTime);
             if (EditorGUI.EndChangeCheck())
             {
-                _utilitySettings.FixedDeltaTime = fixedDeltaTime;
-                EditorUtility.SetDirty(_utilitySettings);
+                utilitySettings.FixedDeltaTime = fixedDeltaTime;
+                EditorUtility.SetDirty(utilitySettings);
             }
 
             EditorGUILayout.Space(5);
 
             EditorGUI.BeginChangeCheck();
-            Undo.RecordObject(_utilitySettings, "Change Target Frame Rate");
-            int targetFrameRate = EditorGUILayout.IntField("Target Frame Rate", _utilitySettings.TargetFrameRate);
+            Undo.RecordObject(utilitySettings, "Change Target Frame Rate");
+            int targetFrameRate = EditorGUILayout.IntField("Target Frame Rate", utilitySettings.TargetFrameRate);
             if (EditorGUI.EndChangeCheck())
             {
-                _utilitySettings.TargetFrameRate = targetFrameRate;
-                EditorUtility.SetDirty(_utilitySettings);
+                utilitySettings.TargetFrameRate = targetFrameRate;
+                PercasSettings.FrameRate.Set(utilitySettings.TargetFrameRate);
+                EditorUtility.SetDirty(utilitySettings);
             }
 
             EditorGUILayout.HelpBox(
@@ -355,12 +409,12 @@ namespace Percas.Editor
             EditorGUILayout.Space(5);
             if (GUILayout.Button("Apply", GUILayout.Height(25)))
             {
-                _utilitySettings.Apply();
+                utilitySettings.Apply();
             }
-            
+
             if (GUILayout.Button("Reset Time Settings", GUILayout.Height(25)))
             {
-                _utilitySettings.ResetTimeSettings();
+                utilitySettings.ResetTimeSettings();
             }
 
             EditorGUILayout.EndVertical();
@@ -372,12 +426,13 @@ namespace Percas.Editor
             EditorGUILayout.Space(2);
 
             EditorGUI.BeginChangeCheck();
-            Undo.RecordObject(_utilitySettings, "Change Show Logs");
-            bool showLogs = EditorGUILayout.Toggle("Show Logs", _utilitySettings.ShowLogs);
+            Undo.RecordObject(utilitySettings, "Change Show Logs");
+            bool showLogs = EditorGUILayout.Toggle("Show Logs", utilitySettings.ShowLogs);
             if (EditorGUI.EndChangeCheck())
             {
-                _utilitySettings.ShowLogs = showLogs;
-                EditorUtility.SetDirty(_utilitySettings);
+                utilitySettings.ShowLogs = showLogs;
+                PercasSettings.Log.Set(utilitySettings.ShowLogs);
+                EditorUtility.SetDirty(utilitySettings);
             }
 
             EditorGUILayout.Space(5);
@@ -398,21 +453,21 @@ namespace Percas.Editor
             EditorGUILayout.Space(2);
 
             EditorGUI.BeginChangeCheck();
-            Undo.RecordObject(_utilitySettings, "Change Show Performance Stats");
-            bool showStats = EditorGUILayout.Toggle("Show Performance Stats", _utilitySettings.ShowPerformanceStats);
+            Undo.RecordObject(utilitySettings, "Change Show Performance Stats");
+            bool showStats = EditorGUILayout.Toggle("Show Performance Stats", utilitySettings.ShowPerformanceStats);
             if (EditorGUI.EndChangeCheck())
             {
-                _utilitySettings.ShowPerformanceStats = showStats;
-                EditorUtility.SetDirty(_utilitySettings);
+                utilitySettings.ShowPerformanceStats = showStats;
+                EditorUtility.SetDirty(utilitySettings);
             }
 
-            if (_utilitySettings.ShowPerformanceStats && Application.isPlaying)
+            if (utilitySettings.ShowPerformanceStats && Application.isPlaying)
             {
-                _utilitySettings.GetPerformanceStats(
-                    out var fps, 
+                utilitySettings.GetPerformanceStats(
+                    out var fps,
                     out var batches,
-                    out var drawCalls, 
-                    out var tris, 
+                    out var drawCalls,
+                    out var tris,
                     out var verts,
                     out var totalMemory,
                     out var usedMemory,
@@ -432,7 +487,7 @@ namespace Percas.Editor
                 EditorGUILayout.LabelField($"Used Memory: {usedMemory / 1024 / 1024} MB");
                 EditorGUILayout.LabelField($"Total Memory: {totalMemory} MB");
             }
-            else if (_utilitySettings.ShowPerformanceStats)
+            else if (utilitySettings.ShowPerformanceStats)
             {
                 EditorGUILayout.HelpBox("Performance stats are only available during play mode.", MessageType.Info);
             }
@@ -440,12 +495,12 @@ namespace Percas.Editor
             EditorGUILayout.EndVertical();
         }
 
-        public static void OpenPlayerSettings()
+        private static void OpenPlayerSettings()
         {
             EditorApplication.ExecuteMenuItem("Edit/Project Settings...");
             var projectSettingsWindow = GetWindow(Type.GetType("UnityEditor.ProjectSettingsWindow,UnityEditor"));
             var projectSettingsMethod = projectSettingsWindow.GetType().GetMethod("SelectProviderByName",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                BindingFlags.NonPublic | BindingFlags.Instance);
             if (projectSettingsMethod != null)
             {
                 projectSettingsMethod.Invoke(projectSettingsWindow, new object[] { "Project/Player" });
@@ -454,9 +509,9 @@ namespace Percas.Editor
 
         private void OnDestroy()
         {
-            if (_percasBuilder)
+            if (percasBuilder)
             {
-                DestroyImmediate(_percasBuilder);
+                DestroyImmediate(percasBuilder);
             }
         }
     }
