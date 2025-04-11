@@ -67,7 +67,7 @@ namespace PercasHelper.Runtime
 #if UNITY_EDITOR
                 UnityEditor.EditorPrefs.SetBool(ShowLogsKey, value);
                 _runtimeSettings = Resources.Load<PercasRuntimeSettingsSO>(RuntimeResourcePath);
-                _runtimeSettings.ShowLogs = value;
+                if(_runtimeSettings != null) _runtimeSettings.ShowLogs = value;
 #endif
             }
         }
@@ -91,7 +91,7 @@ namespace PercasHelper.Runtime
 #if UNITY_EDITOR
                 UnityEditor.EditorPrefs.SetInt(FrameRateKey, value);
                 _runtimeSettings = Resources.Load<PercasRuntimeSettingsSO>(RuntimeResourcePath);
-                _runtimeSettings.FrameRate = value;
+                if(_runtimeSettings != null) _runtimeSettings.FrameRate = value;
 #endif
             }
         }
