@@ -5,7 +5,7 @@ using Unity.Collections;
 using UnityEditor;
 using UnityEngine;
 
-namespace Percas.Editor
+namespace PercasHelper.Editor
 {
     public enum VersionCodeType
     {

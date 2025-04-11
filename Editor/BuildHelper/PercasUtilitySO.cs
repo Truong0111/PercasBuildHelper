@@ -5,7 +5,7 @@ using System.IO;
 using System.Collections;
 using System.Linq;
 
-namespace Percas.Editor
+namespace PercasHelper.Editor
 {
     public class PercasUtilitySO : ScriptableObject
     {

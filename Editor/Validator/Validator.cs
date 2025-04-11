@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEngine;
 
-namespace Percas.Editor
+namespace PercasHelper.Editor
 {
     public class Validator
     {

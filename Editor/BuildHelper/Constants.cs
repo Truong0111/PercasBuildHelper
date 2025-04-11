@@ -1,4 +1,4 @@
-﻿namespace Percas.Editor
+﻿namespace PercasHelper.Editor
 {
     public static class Constants
     {

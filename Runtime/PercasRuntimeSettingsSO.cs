@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace Percas.Helper
+namespace PercasHelper.Runtime
 {
     [CreateAssetMenu(fileName = "PercasRuntimeSettings", menuName = "Percas/Runtime Settings")]
     public class PercasRuntimeSettingsSO : ScriptableObject

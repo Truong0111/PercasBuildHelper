@@ -2,16 +2,17 @@
 using UnityEngine;
 using UnityEditor;
 using System.IO;
+using PercasHelper.Runtime;
 
-namespace Percas.Helper
+namespace PercasHelper.Runtime
 {
     [InitializeOnLoad]
-    public static class PercasPackageInitializer
+    public static class PercasHelperPackageInitializer
     {
         private const string AssetFolderPath = "Assets/Resources";
-        private const string AssetPath = "Assets/Resources/PercasRuntimeSettings.asset";
+        private const string AssetPath = "Assets/Resources/PercasHelperRuntimeSettings.asset";
 
-        static PercasPackageInitializer()
+        static PercasHelperPackageInitializer()
         {
             EditorApplication.delayCall += () =>
             {
@@ -36,7 +37,7 @@ namespace Percas.Helper
             AssetDatabase.CreateAsset(settings, AssetPath);
             AssetDatabase.SaveAssets();
 
-            Debug.Log("[PercasPackage] Created default PercasRuntimeSettings.asset in Resources/");
+            Debug.Log("[PercasHelperPackage] Created default PercasHelperRuntimeSettings.asset in Resources/");
         }
     }
 }

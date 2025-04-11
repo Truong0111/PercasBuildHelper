@@ -3,9 +3,9 @@ using UnityEditor;
 using System;
 using System.IO;
 using System.Reflection;
-using Percas.Helper;
+using PercasHelper.Runtime;
 
-namespace Percas.Editor
+namespace PercasHelper.Editor
 {
     public class PercasEditor : EditorWindow
     {

@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace Percas.Helper
+namespace PercasHelper.Runtime
 {
     public class PercasUtility
     {

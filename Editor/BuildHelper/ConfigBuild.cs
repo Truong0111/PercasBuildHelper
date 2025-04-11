@@ -7,7 +7,7 @@ using UnityEditor.Android;
 using Application = UnityEngine.Application;
 using Debug = UnityEngine.Debug;
 
-namespace Percas.Editor
+namespace PercasHelper.Editor
 {
     public class ConfigBuild : EditorWindow
     {
