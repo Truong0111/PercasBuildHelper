@@ -39,7 +39,7 @@ namespace PercasHelper.Runtime
 
     public static class PercasSettings
     {
-        private const string RuntimeResourcePath = "PercasRuntimeSettings";
+        private const string RuntimeResourcePath = "PercasHelperRuntimeSettings";
 
         private static PercasRuntimeSettingsSO _runtimeSettings;
 
@@ -57,7 +57,6 @@ namespace PercasHelper.Runtime
 #if UNITY_EDITOR
                 return UnityEditor.EditorPrefs.GetBool(ShowLogsKey, true);
 #else
-                _runtimeSettings = Resources.Load<PercasRuntimeSettingsSO>(RuntimeResourcePath);
                 return _runtimeSettings != null ? _runtimeSettings.ShowLogs : true;
 #endif
             }
@@ -66,7 +65,6 @@ namespace PercasHelper.Runtime
             {
 #if UNITY_EDITOR
                 UnityEditor.EditorPrefs.SetBool(ShowLogsKey, value);
-                _runtimeSettings = Resources.Load<PercasRuntimeSettingsSO>(RuntimeResourcePath);
                 if(_runtimeSettings != null) _runtimeSettings.ShowLogs = value;
 #endif
             }
@@ -81,7 +79,6 @@ namespace PercasHelper.Runtime
 #if UNITY_EDITOR
                 return UnityEditor.EditorPrefs.GetInt(FrameRateKey, 60);
 #else
-                _runtimeSettings = Resources.Load<PercasRuntimeSettingsSO>(RuntimeResourcePath);
                 return _runtimeSettings != null ? _runtimeSettings.FrameRate : 60;
 #endif
             }
@@ -90,7 +87,6 @@ namespace PercasHelper.Runtime
             {
 #if UNITY_EDITOR
                 UnityEditor.EditorPrefs.SetInt(FrameRateKey, value);
-                _runtimeSettings = Resources.Load<PercasRuntimeSettingsSO>(RuntimeResourcePath);
                 if(_runtimeSettings != null) _runtimeSettings.FrameRate = value;
 #endif
             }
