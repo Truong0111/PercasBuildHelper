@@ -2,5 +2,6 @@
   "name": "com.percas.studio.game",
   "displayName": "Build Helper",
   "version": "1.0.3",
-  "description": "A tool for help on build and setting project, and a little utility!"
+  "description": "A tool for help on build and setting project, and a little utility!",
+  "asmdef": true
 }

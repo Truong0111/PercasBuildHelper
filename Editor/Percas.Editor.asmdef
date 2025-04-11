@@ -1,0 +1,9 @@
+﻿{
+  "name": "PercasHelper.Editor",
+  "references": [
+    "PercasHelper.Runtime"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ]
+}
