@@ -15,7 +15,7 @@ namespace Percas.Helper
             get => PercasSettings.FrameRate.Get();
             set => PercasSettings.FrameRate.Set(value);
         }
-        
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         static void InitBeforeScene()
         {
