@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using Unity.Collections;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace PercasHelper.Editor
 {
@@ -16,21 +17,21 @@ namespace PercasHelper.Editor
 
     public class PercasConfigSO : ScriptableObject
     {
-        [field: SerializeField] public string ProductName { get; set; }
-        [field: SerializeField] public string PackageName { get; set; }
-        [field: SerializeField] public string AliasName { get; set; }
-        [field: SerializeField] public bool UsePackageNameForPass { get; set; } = true;
-        [field: SerializeField] public string KeyStorePass { get; set; }
-        [field: SerializeField] public bool UseCustomKeystore { get; set; } = true;
-        [field: SerializeField] public string CustomKeystorePath { get; set; } = Constants.Path.KeyStore;
-        [field: SerializeField] public bool SplitApplicationBinary { get; set; } = false;
-        [field: SerializeField] public VersionCodeType VersionCodeType { get; set; } = VersionCodeType.Increase;
-        [field: SerializeField, Min(0)] public int MajorVersion { get; set; } = 0;
-        [field: SerializeField, Min(0)] public int Version { get; set; } = 1;
-        [field: SerializeField, ReadOnly] public string VersionName { get; set; } = "0.0.1";
-        [field: SerializeField] public bool IsUseCustomVersionCode { get; set; } = false;
-        [field: SerializeField] public int VersionCode { get; set; } = 1;
-        [field: SerializeField] public Texture2D IconTexture { get; set; }
+        public string ProductName = Constants.DefaultProductName;
+        public string PackageName = Constants.DefaultPackageName;
+        public string AliasName = Constants.DefaultAlias;
+        public bool UsePackageNameForPass = true;
+        public string KeyStorePass;
+        public bool UseCustomKeystore = true;
+        public string CustomKeystorePath = Constants.Path.KeyStore;
+        public bool SplitApplicationBinary = false;
+        public VersionCodeType VersionCodeType = VersionCodeType.Increase;
+        public int VersionMajor = 0;
+        public int VersionMinor = 0;
+        public int VersionPatch = 1;
+        public string VersionName = "0.0.1";
+        public int VersionCode;
+        public Texture2D IconTexture;
 
         private const string PercasConfigFileName = "PercasConfig";
         private const string PercasConfigResDir = "Assets/Percas";
@@ -101,7 +102,7 @@ namespace PercasHelper.Editor
             PlayerSettings.productName = ProductName;
             PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Android, PackageName);
 #if UNITY_ANDROID
-            PlayerSettings.Android.bundleVersionCode = VersionCode;
+            PlayerSettings.Android.bundleVersionCode = VersionPatch;
             PlayerSettings.bundleVersion = VersionName;
             PlayerSettings.Android.useCustomKeystore = UseCustomKeystore;
             if (UseCustomKeystore)
@@ -121,7 +122,7 @@ namespace PercasHelper.Editor
         {
             if (!IsValidVersionCode() || !IsValidVersionName())
             {
-                throw new InvalidOperationException($"Invalid version info: {VersionName} ({VersionCode})");
+                throw new InvalidOperationException($"Invalid version info: {VersionName} ({VersionPatch})");
             }
 
             UpdateVersionCodeAndNameBasedOnVersion();
@@ -129,50 +130,51 @@ namespace PercasHelper.Editor
 
         public void IncreaseVersion()
         {
-            Version++;
+            VersionPatch++;
             OnVersionChanged();
         }
 
         public void DecreaseVersion()
         {
-            Version--;
+            VersionPatch--;
             OnVersionChanged();
         }
 
         public void ResetVersion()
         {
-            MajorVersion = 0;
-            Version = 1;
+            VersionMajor = 0;
+            VersionMinor = 0;
+            VersionPatch = 1;
+            OnVersionChanged();
+        }
+
+        public void RefreshVersion()
+        {
             OnVersionChanged();
         }
 
         private void UpdateVersionCodeAndNameBasedOnVersion()
         {
-            Version = Mathf.Max(0, Version);
-            if (MajorVersion == 0 && Version == 0)
-            {
-                Version = 1;
-            }
+            VersionPatch = Mathf.Max(0, VersionPatch);
 
-            VersionName = $"{MajorVersion}.0.{Version}";
-
-            if (IsUseCustomVersionCode)
+            if (VersionMajor == 0 && VersionPatch == 0)
             {
+                VersionPatch = 1;
             }
-            else
+            
+            VersionName = $"{VersionMajor}.{VersionMinor}.{VersionPatch}";
+            
+            switch (VersionCodeType)
             {
-                switch (VersionCodeType)
-                {
-                    case VersionCodeType.Increase:
-                        VersionCode = MajorVersion + Version;
-                        break;
-                    case VersionCodeType.DateTime:
-                        VersionCode = int.Parse(DateTime.Now.ToString("ddMMyyyy"));
-                        break;
-                    case VersionCodeType.Semantic:
-                        VersionCode = MajorVersion * 10000 + Version;
-                        break;
-                }
+                case VersionCodeType.Increase:
+                    VersionCode = VersionMajor + VersionMinor + VersionPatch;
+                    break;
+                case VersionCodeType.DateTime:
+                    VersionCode = int.Parse(DateTime.Now.ToString("ddMMyyyy"));
+                    break;
+                case VersionCodeType.Semantic:
+                    VersionCode = VersionMajor * 10000 + VersionMinor * 100 + VersionPatch;
+                    break;
             }
             
             ConfigBuild.FixSettingBuild();
@@ -184,11 +186,5 @@ namespace PercasHelper.Editor
         }
 
         private bool IsValidVersionCode() => true;
-
-        public override string ToString()
-        {
-            return
-                $"{base.ToString()}, {nameof(ProductName)}: {ProductName}, {nameof(PackageName)}: {PackageName}, {nameof(MajorVersion)}: {MajorVersion}, {nameof(Version)}: {Version}, {nameof(VersionName)}: {VersionName}, {nameof(VersionCode)}: {VersionCode}, {nameof(IconTexture)}: {IconTexture}";
-        }
     }
 }

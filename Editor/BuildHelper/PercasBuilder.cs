@@ -6,12 +6,23 @@ using System.Linq;
 using UnityEditor;
 using UnityEditor.Android;
 using UnityEngine;
-using Debug = UnityEngine.Debug;
 
 namespace PercasHelper.Editor
 {
     public class PercasBuilder : EditorWindow
     {
+        #region Constants
+
+        private const string BYPASS_PASSWORD = "percasPass";
+        private const string BUILDS_FOLDER = "/../Builds";
+        private const string APK_EXTENSION = "*.apk";
+        private const int BUTTON_HEIGHT = 25;
+        private const int SPACING = 5;
+
+        #endregion
+
+        #region Enums
+
         private enum BuildType
         {
             Mono2X,
@@ -19,160 +30,205 @@ namespace PercasHelper.Editor
             Final
         }
 
-        private bool isCustomBuildFileName = false;
-        private string buildFileName = "";
+        #endregion
+
+        #region Fields
+
+        private bool isCustomBuildFileName;
+        private string buildFileName = string.Empty;
+
         private bool packageName;
         private bool splash;
         private bool icon;
-        private string bypassChecklistPassword;
+        private string bypassChecklistPassword = string.Empty;
+
         private bool testMono2X = true;
         private bool testMono2XCleanBuild;
-        private bool testIllcpp;
         private bool final;
-        private string apk;
-        private int selectedAPKIndex = 0;
+
+        private string selectedApkPath = string.Empty;
+        private int selectedAPKIndex;
+
         private BuildType currentBuildType = BuildType.Mono2X;
+        private string[] availableApkFiles = Array.Empty<string>();
+
+        #endregion
+
+        #region Unity Lifecycle
+
+        private void OnEnable()
+        {
+            RefreshApkList();
+        }
 
         public void OnGUI()
         {
-            EditorGUILayout.Space(5);
-
-            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-            isCustomBuildFileName = EditorGUILayout.Toggle("Use custom name", isCustomBuildFileName);
-            if (isCustomBuildFileName)
+            using (new EditorGUILayout.VerticalScope())
             {
-                buildFileName = EditorGUILayout.TextField("Build file name", buildFileName);
+                EditorGUILayout.Space(SPACING);
+                DrawBuildFileNameSection();
+                DrawChecklistSection();
+                DrawBuildActionsSection();
+                DrawUtilitiesSection();
+                DrawApkInstallationSection();
             }
-            else
-            {
-                buildFileName = "";
-            }
-
-            EditorGUILayout.EndVertical();
-
-            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-            GUILayout.Label("Final Build Checklist", EditorStyles.boldLabel);
-            EditorGUILayout.Space(2);
-
-            EditorGUI.BeginDisabledGroup(true);
-            packageName = EditorGUILayout.Toggle("Package Name", packageName);
-            splash = EditorGUILayout.Toggle("Splash", splash);
-            icon = EditorGUILayout.Toggle("Icon", icon);
-            EditorGUI.EndDisabledGroup();
-
-            EditorGUILayout.Space(5);
-            bypassChecklistPassword = EditorGUILayout.TextField("Bypass Password", bypassChecklistPassword);
-            if (GUILayout.Button("I want to build final", GUILayout.Height(25)))
-            {
-                TestChecklist();
-            }
-
-            EditorGUILayout.EndVertical();
-
-            EditorGUILayout.Space(10);
-
-            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-            GUILayout.Label("Build Actions", EditorStyles.boldLabel);
-            EditorGUILayout.Space(2);
-
-            bool previousTestMono2X = testMono2X;
-            testMono2X = EditorGUILayout.Toggle("Test Mono2x", testMono2X);
-            if (testMono2X && testMono2X != previousTestMono2X) SetBuildType(BuildType.Mono2X);
-
-            bool previousCleanBuild = testMono2XCleanBuild;
-            testMono2XCleanBuild = EditorGUILayout.Toggle("Clean Build", testMono2XCleanBuild);
-            if (testMono2XCleanBuild && testMono2XCleanBuild != previousCleanBuild)
-                SetBuildType(BuildType.Mono2XCleanBuild);
-
-            EditorGUILayout.Space(5);
-            EditorGUI.BeginDisabledGroup((!packageName || !splash || !icon) && bypassChecklistPassword != "percasPass");
-            final = EditorGUILayout.Toggle("Final Build", final);
-            if (final) SetBuildType(BuildType.Final);
-            EditorGUI.EndDisabledGroup();
-
-            EditorGUILayout.Space(5);
-            if (GUILayout.Button("Build", GUILayout.Height(25)))
-            {
-                Build();
-            }
-
-            EditorGUILayout.EndVertical();
-
-            EditorGUILayout.Space(10);
-
-            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-            GUILayout.Label("Build Utilities", EditorStyles.boldLabel);
-            EditorGUILayout.Space(2);
-
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                if (GUILayout.Button("Fix Settings", GUILayout.Height(25)))
-                    FixSettings();
-                if (GUILayout.Button("Create Aab To Apk Command", GUILayout.Height(25)))
-                    CreateAabToApkCommand();
-            }
-
-            EditorGUILayout.Space(5);
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                if (GUILayout.Button("Open Build Folder", GUILayout.Height(25)))
-                    OpenBuildFolder();
-                if (GUILayout.Button("Clean Build Folder", GUILayout.Height(25)))
-                    CleanBuildFolder();
-            }
-
-            EditorGUILayout.EndVertical();
-
-            EditorGUILayout.Space(10);
-
-            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-            GUILayout.Label("APK Installation", EditorStyles.boldLabel);
-            EditorGUILayout.Space(2);
-
-            var files = GetFiles().ToArray();
-
-            if (files.Length == 0)
-            {
-                EditorGUILayout.LabelField("No APK files found in Builds folder", EditorStyles.helpBox);
-                selectedAPKIndex = 0;
-            }
-            else
-            {
-                selectedAPKIndex = Mathf.Clamp(selectedAPKIndex, 0, files.Length - 1);
-
-                EditorGUI.BeginChangeCheck();
-                selectedAPKIndex = EditorGUILayout.Popup("APK File", selectedAPKIndex, files);
-                if (EditorGUI.EndChangeCheck())
-                {
-                    apk = files[selectedAPKIndex];
-                }
-
-                if (GUILayout.Button("Install APK", GUILayout.Height(25)))
-                {
-                    apk = files[selectedAPKIndex];
-                    InstallAPK();
-                }
-            }
-
-            EditorGUILayout.Space(5);
-            if (GUILayout.Button("Open Debugging Port To Device", GUILayout.Height(25)))
-            {
-                OpenDebuggingPortToDevice();
-            }
-
-            EditorGUILayout.EndVertical();
         }
 
-        private void TestChecklist()
-        {
-            var validator = new Validator(PercasConfigSO.LoadInstance());
-            packageName = validator.CheckPackageName();
-            icon = validator.CheckIcon();
-            splash = validator.CheckSplash();
+        #endregion
 
-            if ((!packageName || !splash || !icon) && bypassChecklistPassword != "percasPass")
+        #region GUI Sections
+
+        private void DrawBuildFileNameSection()
+        {
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                SetBuildType(BuildType.Mono2X);
+                isCustomBuildFileName = EditorGUILayout.Toggle("Use custom name", isCustomBuildFileName);
+
+                if (isCustomBuildFileName)
+                {
+                    buildFileName = EditorGUILayout.TextField("Build file name", buildFileName);
+                }
+                else
+                {
+                    buildFileName = string.Empty;
+                }
+            }
+        }
+
+        private void DrawChecklistSection()
+        {
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                GUILayout.Label("Final Build Checklist", EditorStyles.boldLabel);
+                EditorGUILayout.Space(2);
+
+                using (new EditorGUI.DisabledScope(true))
+                {
+                    packageName = EditorGUILayout.Toggle("Package Name", packageName);
+                    splash = EditorGUILayout.Toggle("Splash", splash);
+                    icon = EditorGUILayout.Toggle("Icon", icon);
+                }
+
+                EditorGUILayout.Space(SPACING);
+                bypassChecklistPassword = EditorGUILayout.TextField("Bypass Password", bypassChecklistPassword);
+
+                if (GUILayout.Button("Validate Final Build Requirements", GUILayout.Height(BUTTON_HEIGHT)))
+                {
+                    ValidateChecklist();
+                }
+            }
+        }
+
+        private void DrawBuildActionsSection()
+        {
+            EditorGUILayout.Space(10);
+
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                GUILayout.Label("Build Actions", EditorStyles.boldLabel);
+                EditorGUILayout.Space(2);
+
+                HandleBuildTypeToggle("Test Mono2x", BuildType.Mono2X, ref testMono2X);
+                HandleBuildTypeToggle("Clean Build", BuildType.Mono2XCleanBuild, ref testMono2XCleanBuild);
+
+                EditorGUILayout.Space(SPACING);
+
+                bool canBuildFinal = IsChecklistValid() || IsBypassPasswordValid();
+                using (new EditorGUI.DisabledScope(!canBuildFinal))
+                {
+                    HandleBuildTypeToggle("Final Build", BuildType.Final, ref final);
+                }
+
+                EditorGUILayout.Space(SPACING);
+                if (GUILayout.Button("Build", GUILayout.Height(BUTTON_HEIGHT)))
+                {
+                    ExecuteBuild();
+                }
+            }
+        }
+
+        private void DrawUtilitiesSection()
+        {
+            EditorGUILayout.Space(10);
+
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                GUILayout.Label("Build Utilities", EditorStyles.boldLabel);
+                EditorGUILayout.Space(2);
+
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    if (GUILayout.Button("Fix Settings", GUILayout.Height(BUTTON_HEIGHT)))
+                        FixSettings();
+                    if (GUILayout.Button("Create Aab To Apk Command", GUILayout.Height(BUTTON_HEIGHT)))
+                        CreateAabToApkCommand();
+                }
+
+                EditorGUILayout.Space(SPACING);
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    if (GUILayout.Button("Open Build Folder", GUILayout.Height(BUTTON_HEIGHT)))
+                        OpenBuildFolder();
+                    if (GUILayout.Button("Clean Build Folder", GUILayout.Height(BUTTON_HEIGHT)))
+                        CleanBuildFolder();
+                }
+            }
+        }
+
+        private void DrawApkInstallationSection()
+        {
+            EditorGUILayout.Space(10);
+
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                GUILayout.Label("APK Installation", EditorStyles.boldLabel);
+                EditorGUILayout.Space(2);
+
+                if (availableApkFiles.Length == 0)
+                {
+                    EditorGUILayout.LabelField("No APK files found in Builds folder", EditorStyles.helpBox);
+                    if (GUILayout.Button("Refresh APK List", GUILayout.Height(BUTTON_HEIGHT)))
+                    {
+                        RefreshApkList();
+                    }
+                }
+                else
+                {
+                    selectedAPKIndex = Mathf.Clamp(selectedAPKIndex, 0, availableApkFiles.Length - 1);
+
+                    EditorGUI.BeginChangeCheck();
+                    selectedAPKIndex = EditorGUILayout.Popup("APK File", selectedAPKIndex, availableApkFiles);
+                    if (EditorGUI.EndChangeCheck())
+                    {
+                        selectedApkPath = availableApkFiles[selectedAPKIndex];
+                    }
+
+                    if (GUILayout.Button("Install APK", GUILayout.Height(BUTTON_HEIGHT)))
+                    {
+                        InstallSelectedApk();
+                    }
+                }
+
+                EditorGUILayout.Space(SPACING);
+                if (GUILayout.Button("Open Debugging Port To Device", GUILayout.Height(BUTTON_HEIGHT)))
+                {
+                    OpenDebuggingPortToDevice();
+                }
+            }
+        }
+
+        #endregion
+
+        #region Build Management
+
+        private void HandleBuildTypeToggle(string label, BuildType buildType, ref bool toggleValue)
+        {
+            bool previousValue = toggleValue;
+            toggleValue = EditorGUILayout.Toggle(label, toggleValue);
+
+            if (toggleValue && toggleValue != previousValue)
+            {
+                SetBuildType(buildType);
             }
         }
 
@@ -184,102 +240,161 @@ namespace PercasHelper.Editor
             final = type == BuildType.Final;
         }
 
-        private void FixSettings()
+        private void ValidateChecklist()
         {
-            ConfigBuild.FixSettingBuild();
+            var config = PercasConfigSO.LoadInstance();
+            if (config == null)
+            {
+                UnityEngine.Debug.LogError("PercasConfigSO instance not found!");
+                return;
+            }
+
+            var validator = new Validator(config);
+            packageName = validator.CheckPackageName();
+            icon = validator.CheckIcon();
+            splash = validator.CheckSplash();
+
+            if (!IsChecklistValid() && !IsBypassPasswordValid())
+            {
+                SetBuildType(BuildType.Mono2X);
+                UnityEngine.Debug.LogWarning("Checklist validation failed. Defaulting to Mono2X build.");
+            }
+            else
+            {
+                UnityEngine.Debug.Log("Checklist validation passed!");
+            }
         }
 
-        private void CreateAabToApkCommand()
+        private bool IsChecklistValid() => packageName && splash && icon;
+        private bool IsBypassPasswordValid() => bypassChecklistPassword == BYPASS_PASSWORD;
+
+        private void ExecuteBuild()
         {
-            ConfigBuild.CreateTemplateCmdConvertFile();
+            try
+            {
+                var buildOptions = testMono2XCleanBuild ? BuildOptions.CleanBuildCache : BuildOptions.None;
+                ConfigBuild.BuildGame(final, buildOptions, isCustomBuildFileName, buildFileName);
+
+                // Refresh APK list after build
+                EditorApplication.delayCall += RefreshApkList;
+            }
+            catch (Exception ex)
+            {
+                UnityEngine.Debug.LogError($"Build failed: {ex.Message}");
+            }
         }
 
-        private void OpenBuildFolder()
-        {
-            ConfigBuild.OpenFileBuild();
-        }
+        #endregion
+
+        #region Utility Methods
+
+        private void FixSettings() => ConfigBuild.FixSettingBuild();
+        private void CreateAabToApkCommand() => ConfigBuild.CreateTemplateCmdConvertFile();
+        private void OpenBuildFolder() => ConfigBuild.OpenFileBuild();
 
         private void CleanBuildFolder()
         {
-            var sure = EditorUtility.DisplayDialog("Clean Build Folder",
-                "Are you sure you want to delete all contents in the Build Folder?", "Delete All", "Cancel");
-            if (!sure) return;
-            ConfigBuild.CleanFolderBuild();
+            bool confirmed = EditorUtility.DisplayDialog(
+                "Clean Build Folder",
+                "Are you sure you want to delete all contents in the Build Folder?",
+                "Delete All",
+                "Cancel"
+            );
+
+            if (confirmed)
+            {
+                ConfigBuild.CleanFolderBuild();
+                RefreshApkList();
+            }
         }
 
-        private void Build()
-        {
-            ConfigBuild.BuildGame(final, testMono2XCleanBuild ? BuildOptions.CleanBuildCache : BuildOptions.None,
-                isCustomBuildFileName, buildFileName);
-        }
+        #endregion
 
-        protected void OnEnable()
+        #region APK Management
+
+        private void RefreshApkList()
         {
-            var files = GetFiles().ToList();
-            if (files.Count > 0)
+            availableApkFiles = GetAvailableApkFiles().ToArray();
+
+            if (availableApkFiles.Length > 0)
             {
                 selectedAPKIndex = 0;
-                apk = files[0];
+                selectedApkPath = availableApkFiles[0];
             }
             else
             {
                 selectedAPKIndex = 0;
-                apk = string.Empty;
+                selectedApkPath = string.Empty;
             }
         }
 
-        private IEnumerable<string> GetFiles()
+        private IEnumerable<string> GetAvailableApkFiles()
         {
-            if (!Directory.Exists(Application.dataPath + "/../Builds"))
-                return Array.Empty<string>();
+            string buildsPath = Application.dataPath + BUILDS_FOLDER;
 
-            return Directory.GetFiles(Application.dataPath + "/../Builds", "*.apk", SearchOption.AllDirectories)
-                .Select(Path.GetFileNameWithoutExtension)
-                .OrderByDescending(s => s);
-        }
+            if (!Directory.Exists(buildsPath))
+                return Enumerable.Empty<string>();
 
-        private void InstallAPK()
-        {
-            var sdkRoot = AndroidExternalToolsSettings.sdkRootPath;
-            string bundleToolPath = Path.Combine(sdkRoot, "platform-tools");
-
-            var apkPath = "\"" + Directory.GetFiles(Application.dataPath + "/../Builds", apk + ".apk",
-                SearchOption.AllDirectories)[0] + "\"";
-
-            var process = new Process()
-            {
-                StartInfo = new ProcessStartInfo()
-                {
-                    FileName = "cmd.exe", WorkingDirectory = bundleToolPath, Arguments = apkPath,
-                    RedirectStandardInput = true,
-                    RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false,
-                    CreateNoWindow = true
-                }
-            };
-
-            process.Start();
-            process.EnableRaisingEvents = true;
-            process.StandardInput.WriteLine($"adb install -r {apkPath}");
-            process.StandardInput.WriteLine("exit");
-
-
-            EditorUtility.DisplayProgressBar($"Installing {apk}...", "Please wait", 0);
             try
             {
-                string output = process.StandardOutput.ReadToEnd();
-                output = output.Substring(output.IndexOf(".apk\"", StringComparison.CurrentCultureIgnoreCase) +
-                                          ".apk\"".Length);
-                output = output.Trim();
+                return Directory.GetFiles(buildsPath, APK_EXTENSION, SearchOption.AllDirectories)
+                    .Select(Path.GetFileNameWithoutExtension)
+                    .Where(name => !string.IsNullOrEmpty(name))
+                    .OrderByDescending(name => name);
+            }
+            catch (Exception ex)
+            {
+                UnityEngine.Debug.LogError($"Failed to get APK files: {ex.Message}");
+                return Enumerable.Empty<string>();
+            }
+        }
 
-                Debug.Log(output);
-                var error = process.StandardError.ReadToEnd();
-                if (!string.IsNullOrWhiteSpace(error))
+        private void InstallSelectedApk()
+        {
+            if (string.IsNullOrEmpty(selectedApkPath))
+            {
+                UnityEngine.Debug.LogError("No APK selected for installation.");
+                return;
+            }
+
+            try
+            {
+                string sdkRoot = AndroidExternalToolsSettings.sdkRootPath;
+                if (string.IsNullOrEmpty(sdkRoot))
                 {
-                    Debug.LogError(error);
+                    UnityEngine.Debug.LogError(
+                        "Android SDK path not found. Please configure Android SDK in Unity preferences.");
+                    return;
                 }
 
-                process.WaitForExit(5000);
-                process.Close();
+                string adbPath = Path.Combine(sdkRoot, "platform-tools", "adb");
+
+                string buildsPath = Application.dataPath + BUILDS_FOLDER;
+                string[] apkFiles =
+                    Directory.GetFiles(buildsPath, selectedApkPath + ".apk", SearchOption.AllDirectories);
+
+                if (apkFiles.Length == 0)
+                {
+                    UnityEngine.Debug.LogError($"APK file not found: {selectedApkPath}.apk");
+                    return;
+                }
+
+                string apkPath = $"\"{apkFiles[0]}\"";
+
+                EditorUtility.DisplayProgressBar($"Installing {selectedApkPath}...", "Please wait", 0.5f);
+
+                using var process = CreateAdbProcess(adbPath, $"install -r {apkPath}");
+                process.Start();
+
+                string output = process.StandardOutput.ReadToEnd();
+                string error = process.StandardError.ReadToEnd();
+                process.WaitForExit();
+
+                LogProcessOutput(output, error);
+            }
+            catch (Exception ex)
+            {
+                UnityEngine.Debug.LogError($"APK installation failed: {ex.Message}");
             }
             finally
             {
@@ -289,23 +404,72 @@ namespace PercasHelper.Editor
 
         private void OpenDebuggingPortToDevice()
         {
-            string bundleToolPath = Path.Combine(EditorApplication.applicationPath,
-                "../Data/PlaybackEngines/AndroidPlayer/SDK/platform-tools");
-
-            using var process = new Process()
+            try
             {
-                StartInfo = new ProcessStartInfo()
+                string bundleToolPath = Path.Combine(
+                    EditorApplication.applicationPath,
+                    "../Data/PlaybackEngines/AndroidPlayer/SDK/platform-tools"
+                );
+
+                using var process = new Process
                 {
-                    FileName = "cmd.exe", WorkingDirectory = bundleToolPath ?? string.Empty,
-                    RedirectStandardInput = true, RedirectStandardOutput = true,
-                    RedirectStandardError = true, UseShellExecute = false, CreateNoWindow = true
+                    StartInfo = new ProcessStartInfo
+                    {
+                        FileName = "cmd.exe",
+                        WorkingDirectory = bundleToolPath,
+                        RedirectStandardInput = true,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    }
+                };
+
+                process.Start();
+                process.StandardInput.WriteLine($"adb forward tcp:34999 localabstract:Unity-{Application.identifier}");
+                process.StandardInput.WriteLine("adb reverse tcp:34998 tcp:34999");
+                process.StandardInput.Flush();
+                process.StandardInput.Close();
+
+                process.WaitForExit(5000); // 5 second timeout
+
+                UnityEngine.Debug.Log("Debugging port opened successfully.");
+            }
+            catch (Exception ex)
+            {
+                UnityEngine.Debug.LogError($"Failed to open debugging port: {ex.Message}");
+            }
+        }
+
+        #endregion
+
+        #region Helper Methods
+
+        private static Process CreateAdbProcess(string adbPath, string arguments)
+        {
+            return new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = adbPath,
+                    Arguments = arguments,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
                 }
             };
-
-            process.Start();
-            process.StandardInput.WriteLine($"adb forward tcp:34999 localabstract:Unity-{Application.identifier}");
-            process.StandardInput.WriteLine("adb reverse tcp:34998 tcp:34999");
-            process.StandardInput.Flush();
         }
+
+        private static void LogProcessOutput(string output, string error)
+        {
+            if (!string.IsNullOrWhiteSpace(output))
+                UnityEngine.Debug.Log($"[ADB OUTPUT] {output.Trim()}");
+
+            if (!string.IsNullOrWhiteSpace(error))
+                UnityEngine.Debug.LogError($"[ADB ERROR] {error.Trim()}");
+        }
+
+        #endregion
     }
 }
