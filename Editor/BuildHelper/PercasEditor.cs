@@ -3,7 +3,6 @@ using UnityEditor;
 using System;
 using System.IO;
 using System.Reflection;
-using PercasHelper.Runtime;
 
 namespace PercasHelper.Editor
 {
