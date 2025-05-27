@@ -12,8 +12,7 @@ namespace PercasHelper.Editor
         private enum EditorTab
         {
             Settings,
-            Build,
-            Utility
+            Build
         }
 
         private EditorTab currentTab = EditorTab.Settings;
@@ -125,9 +124,6 @@ namespace PercasHelper.Editor
                     break;
                 case EditorTab.Build:
                     RenderBuildTab();
-                    break;
-                case EditorTab.Utility:
-                    RenderUtilityTab();
                     break;
             }
 
@@ -362,137 +358,6 @@ namespace PercasHelper.Editor
             {
                 percasBuilder.OnGUI();
             }
-        }
-
-        private void RenderUtilityTab()
-        {
-            EditorGUILayout.Space(5);
-
-            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-            GUILayout.Label("Time Settings", EditorStyles.boldLabel);
-            EditorGUILayout.Space(2);
-
-            EditorGUI.BeginChangeCheck();
-            Undo.RecordObject(utilitySettings, "Change Time Scale");
-            float timeScale = EditorGUILayout.FloatField("Time Scale", utilitySettings.TimeScale);
-            if (EditorGUI.EndChangeCheck())
-            {
-                utilitySettings.TimeScale = timeScale;
-                EditorUtility.SetDirty(utilitySettings);
-            }
-
-            EditorGUI.BeginChangeCheck();
-            Undo.RecordObject(utilitySettings, "Change Fixed Delta Time");
-            float fixedDeltaTime = EditorGUILayout.FloatField("Fixed Delta Time", utilitySettings.FixedDeltaTime);
-            if (EditorGUI.EndChangeCheck())
-            {
-                utilitySettings.FixedDeltaTime = fixedDeltaTime;
-                EditorUtility.SetDirty(utilitySettings);
-            }
-
-            EditorGUILayout.Space(5);
-
-            EditorGUI.BeginChangeCheck();
-            Undo.RecordObject(utilitySettings, "Change Target Frame Rate");
-            int targetFrameRate = EditorGUILayout.IntField("Target Frame Rate", utilitySettings.TargetFrameRate);
-            if (EditorGUI.EndChangeCheck())
-            {
-                utilitySettings.TargetFrameRate = targetFrameRate;
-                PercasSettings.FrameRate.Set(utilitySettings.TargetFrameRate);
-                EditorUtility.SetDirty(utilitySettings);
-            }
-
-            EditorGUILayout.HelpBox(
-                "Note: This setting will be overridden if any script calls Application.targetFrameRate.",
-                MessageType.Warning);
-
-            EditorGUILayout.Space(5);
-            if (GUILayout.Button("Apply", GUILayout.Height(25)))
-            {
-                utilitySettings.Apply();
-            }
-
-            if (GUILayout.Button("Reset Time Settings", GUILayout.Height(25)))
-            {
-                utilitySettings.ResetTimeSettings();
-            }
-
-            EditorGUILayout.EndVertical();
-
-            EditorGUILayout.Space(10);
-
-            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-            GUILayout.Label("Log Utility", EditorStyles.boldLabel);
-            EditorGUILayout.Space(2);
-
-            EditorGUI.BeginChangeCheck();
-            Undo.RecordObject(utilitySettings, "Change Show Logs");
-            bool showLogs = EditorGUILayout.Toggle("Show Logs", utilitySettings.ShowLogs);
-            if (EditorGUI.EndChangeCheck())
-            {
-                utilitySettings.ShowLogs = showLogs;
-                PercasSettings.Log.Set(utilitySettings.ShowLogs);
-                EditorUtility.SetDirty(utilitySettings);
-            }
-
-            EditorGUILayout.Space(5);
-            if (GUILayout.Button("Clear Console", GUILayout.Height(25)))
-            {
-                var assembly = Assembly.GetAssembly(typeof(SceneView));
-                var logEntries = assembly.GetType("UnityEditor.LogEntries");
-                var clearMethod = logEntries.GetMethod("Clear");
-                clearMethod.Invoke(new object(), null);
-            }
-
-            EditorGUILayout.EndVertical();
-
-            EditorGUILayout.Space(10);
-
-            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-            GUILayout.Label("Performance Monitor", EditorStyles.boldLabel);
-            EditorGUILayout.Space(2);
-
-            EditorGUI.BeginChangeCheck();
-            Undo.RecordObject(utilitySettings, "Change Show Performance Stats");
-            bool showStats = EditorGUILayout.Toggle("Show Performance Stats", utilitySettings.ShowPerformanceStats);
-            if (EditorGUI.EndChangeCheck())
-            {
-                utilitySettings.ShowPerformanceStats = showStats;
-                EditorUtility.SetDirty(utilitySettings);
-            }
-
-            if (utilitySettings.ShowPerformanceStats && Application.isPlaying)
-            {
-                utilitySettings.GetPerformanceStats(
-                    out var fps,
-                    out var batches,
-                    out var drawCalls,
-                    out var tris,
-                    out var verts,
-                    out var totalMemory,
-                    out var usedMemory,
-                    out var textureMemory,
-                    out var meshMemory,
-                    out var materialCount);
-
-                EditorGUILayout.Space(5);
-                EditorGUILayout.LabelField($"FPS: {fps:F1}");
-                EditorGUILayout.LabelField($"Draw Calls: {drawCalls}");
-                EditorGUILayout.LabelField($"Batches: {batches}");
-                EditorGUILayout.LabelField($"Triangles: {tris:N0}");
-                EditorGUILayout.LabelField($"Vertices: {verts:N0}");
-                EditorGUILayout.LabelField($"Materials: {materialCount}");
-                EditorGUILayout.LabelField($"Texture Memory: {textureMemory / 1024 / 1024} MB");
-                EditorGUILayout.LabelField($"Mesh Memory: {meshMemory / 1024 / 1024} MB");
-                EditorGUILayout.LabelField($"Used Memory: {usedMemory / 1024 / 1024} MB");
-                EditorGUILayout.LabelField($"Total Memory: {totalMemory} MB");
-            }
-            else if (utilitySettings.ShowPerformanceStats)
-            {
-                EditorGUILayout.HelpBox("Performance stats are only available during play mode.", MessageType.Info);
-            }
-
-            EditorGUILayout.EndVertical();
         }
 
         private static void OpenPlayerSettings()

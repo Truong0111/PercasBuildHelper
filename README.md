@@ -20,27 +20,6 @@ dõi phiên bản và kiểm tra hiệu suất game một cách hiệu quả.
 - Chọn cách đánh số phiên bản (Tự động hoặc Tùy chỉnh)
 - Tăng/giảm phiên bản với một cú nhấp chuột
 
-### Performance Watching
-
-- Xem FPS trực tiếp khi chơi game
-- Kiểm tra số lượng draw call
-- Theo dõi số lượng batch
-- Xem số lượng tam giác và đỉnh
-- Kiểm tra bộ nhớ:
-    - Tổng bộ nhớ hệ thống
-    - Bộ nhớ đang sử dụng
-    - Bộ nhớ dành cho texture
-    - Bộ nhớ dành cho mesh
-    - Số lượng material đang dùng
-
-### Utility 
-
-- Điều chỉnh tốc độ game (Time scale)
-- Tùy chỉnh fixed delta time
-- Đặt giới hạn FPS
-- On/Off hiển thị log
-- Xem thống kê hiệu suất
-
 ## Cài đặt
 
 ### Import qua Package Manager
