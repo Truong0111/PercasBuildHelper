@@ -16,7 +16,6 @@ namespace PercasHelper.Editor
 
         private EditorTab currentTab = EditorTab.Settings;
         private PercasConfigSO buildSettings;
-        private PercasUtilitySO utilitySettings;
         private PercasBuilder percasBuilder;
         private Vector2 scrollPosition;
         private bool isRepainting = false;
@@ -45,61 +44,8 @@ namespace PercasHelper.Editor
         private void OnEnable()
         {
             buildSettings = PercasConfigSO.LoadInstance();
-            utilitySettings = PercasUtilitySO.LoadInstance();
             percasBuilder = CreateInstance<PercasBuilder>();
 
-            Undo.undoRedoPerformed += OnUndoRedoPerformed;
-            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
-        }
-
-        private void OnDisable()
-        {
-            Undo.undoRedoPerformed -= OnUndoRedoPerformed;
-            EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
-            StopContinuousRepaint();
-        }
-
-        private void OnPlayModeStateChanged(PlayModeStateChange state)
-        {
-            if (state == PlayModeStateChange.EnteredPlayMode)
-            {
-                StartContinuousRepaint();
-            }
-            else if (state == PlayModeStateChange.ExitingPlayMode)
-            {
-                StopContinuousRepaint();
-            }
-        }
-
-        private void StartContinuousRepaint()
-        {
-            if (!isRepainting)
-            {
-                isRepainting = true;
-                EditorApplication.update += OnEditorUpdate;
-            }
-        }
-
-        private void StopContinuousRepaint()
-        {
-            if (isRepainting)
-            {
-                isRepainting = false;
-                EditorApplication.update -= OnEditorUpdate;
-            }
-        }
-
-        private void OnEditorUpdate()
-        {
-            if (isRepainting && utilitySettings.ShowPerformanceStats)
-            {
-                Repaint();
-            }
-        }
-
-        private void OnUndoRedoPerformed()
-        {
-            Repaint();
         }
 
         private void OnGUI()
@@ -107,7 +53,7 @@ namespace PercasHelper.Editor
             EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
             currentTab = (EditorTab)GUILayout.Toolbar(
                 (int)currentTab,
-                new[] { "Settings", "Build", "Utility" },
+                new[] { "Settings", "Build" },
                 EditorStyles.toolbarButton
             );
             EditorGUILayout.EndHorizontal();
