@@ -266,6 +266,13 @@ namespace PercasHelper.Editor
         private void DrawCustomActions()
         {
             /* Placeholder for future settings */
+            using (new EditorGUILayout.VerticalScope())
+            {
+                if(GUILayout.Button("Apply", GUILayout.Height(BUTTON_HEIGHT)))
+                    buildSettings.Apply();
+                if (GUILayout.Button("Open Player Settings", GUILayout.Height(BUTTON_HEIGHT)))
+                    SettingsService.OpenProjectSettings("Project/Player");
+            }
         }
 
         #endregion

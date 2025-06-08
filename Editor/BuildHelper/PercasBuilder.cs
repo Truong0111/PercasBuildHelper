@@ -49,7 +49,6 @@ namespace PercasHelper.Editor
         private string selectedApkPath = string.Empty;
         private int selectedAPKIndex;
 
-        private BuildType currentBuildType = BuildType.Mono2X;
         private string[] availableApkFiles = Array.Empty<string>();
 
         #endregion
@@ -164,7 +163,6 @@ namespace PercasHelper.Editor
                         CreateAabToApkCommand();
                 }
 
-                EditorGUILayout.Space(SPACING);
                 using (new EditorGUILayout.HorizontalScope())
                 {
                     if (GUILayout.Button("Open Build Folder", GUILayout.Height(BUTTON_HEIGHT)))
@@ -209,7 +207,6 @@ namespace PercasHelper.Editor
                     }
                 }
 
-                EditorGUILayout.Space(SPACING);
                 if (GUILayout.Button("Open Debugging Port To Device", GUILayout.Height(BUTTON_HEIGHT)))
                 {
                     OpenDebuggingPortToDevice();
@@ -234,7 +231,6 @@ namespace PercasHelper.Editor
 
         private void SetBuildType(BuildType type)
         {
-            currentBuildType = type;
             testMono2X = type == BuildType.Mono2X;
             testMono2XCleanBuild = type == BuildType.Mono2XCleanBuild;
             final = type == BuildType.Final;
@@ -411,18 +407,16 @@ namespace PercasHelper.Editor
                     "../Data/PlaybackEngines/AndroidPlayer/SDK/platform-tools"
                 );
 
-                using var process = new Process
+                using var process = new Process();
+                process.StartInfo = new ProcessStartInfo
                 {
-                    StartInfo = new ProcessStartInfo
-                    {
-                        FileName = "cmd.exe",
-                        WorkingDirectory = bundleToolPath,
-                        RedirectStandardInput = true,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        UseShellExecute = false,
-                        CreateNoWindow = true
-                    }
+                    FileName = "cmd.exe",
+                    WorkingDirectory = bundleToolPath,
+                    RedirectStandardInput = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
                 };
 
                 process.Start();
@@ -431,7 +425,7 @@ namespace PercasHelper.Editor
                 process.StandardInput.Flush();
                 process.StandardInput.Close();
 
-                process.WaitForExit(5000); // 5 second timeout
+                process.WaitForExit(5000);
 
                 UnityEngine.Debug.Log("Debugging port opened successfully.");
             }
