@@ -12,7 +12,8 @@ namespace PercasHelper.Editor
     {
         Increase,
         DateTime,
-        Semantic
+        Semantic,
+        Custom
     }
 
     public class PercasConfigSO : ScriptableObject
@@ -50,6 +51,7 @@ namespace PercasHelper.Editor
                 Directory.CreateDirectory(PercasConfigResDir);
                 instance = CreateInstance<PercasConfigSO>();
                 AssetDatabase.CreateAsset(instance, PercasConfigFilePath);
+                instance.LoadFromSetting();
                 AssetDatabase.SaveAssets();
             }
 
@@ -63,18 +65,43 @@ namespace PercasHelper.Editor
 
         private void OnEnable()
         {
+            LoadFromSetting();
+        }
+
+        public void LoadFromSetting()
+        {
             ProductName = PlayerSettings.productName;
-            if (string.IsNullOrEmpty(ProductName)) ProductName = Constants.DefaultProductName;
+            if (string.IsNullOrEmpty(ProductName))
+                ProductName = Constants.DefaultProductName;
+
 #if UNITY_IOS || UNITY_ANDROID
             PackageName = PlayerSettings.applicationIdentifier;
-            if (string.IsNullOrEmpty(PackageName)) PackageName = Constants.DefaultPackageName;
+            if (string.IsNullOrEmpty(PackageName))
+                PackageName = Constants.DefaultPackageName;
 #endif
+
 #if UNITY_ANDROID
             PlayerSettings.Android.useCustomKeystore = true;
 
             AliasName = PlayerSettings.Android.keyaliasName;
-            if (string.IsNullOrEmpty(AliasName)) AliasName = Constants.DefaultAlias;
+            if (string.IsNullOrEmpty(AliasName))
+                AliasName = Constants.DefaultAlias;
 #endif
+            VersionName = PlayerSettings.bundleVersion;
+
+            string[] parts = VersionName.Split('.');
+            if (parts.Length >= 3)
+            {
+                int.TryParse(parts[0], out VersionMajor);
+                int.TryParse(parts[1], out VersionMinor);
+                int.TryParse(parts[2], out VersionPatch);
+            }
+            else
+            {
+                VersionMajor = 0;
+                VersionMinor = 0;
+                VersionPatch = 1;
+            }
         }
 
         public void Apply()
@@ -161,9 +188,9 @@ namespace PercasHelper.Editor
             {
                 VersionPatch = 1;
             }
-            
+
             VersionName = $"{VersionMajor}.{VersionMinor}.{VersionPatch}";
-            
+
             switch (VersionCodeType)
             {
                 case VersionCodeType.Increase:
@@ -176,7 +203,7 @@ namespace PercasHelper.Editor
                     VersionCode = VersionMajor * 10000 + VersionMinor * 100 + VersionPatch;
                     break;
             }
-            
+
             ConfigBuild.FixSettingBuild();
         }
 

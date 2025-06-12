@@ -154,7 +154,7 @@ namespace PercasHelper.Editor
 
                 using (new EditorGUI.DisabledScope(true))
                     EditorGUILayout.TextField("Version Name", buildSettings.VersionName);
-                
+
                 DrawIntField("Version Code", ref buildSettings.VersionCode);
 
                 DrawVersionActions();
@@ -174,10 +174,10 @@ namespace PercasHelper.Editor
         {
             DrawToggleField("PackageName As Pass", ref buildSettings.UsePackageNameForPass);
             if (buildSettings.UsePackageNameForPass) return;
-            
+
             DrawPasswordField("Key Store Pass", ref buildSettings.KeyStorePass);
         }
-        
+
         private void DrawCustomKeystore()
         {
             DrawToggleField("Use Custom Keystore", ref buildSettings.UseCustomKeystore);
@@ -268,7 +268,7 @@ namespace PercasHelper.Editor
             /* Placeholder for future settings */
             using (new EditorGUILayout.VerticalScope())
             {
-                if(GUILayout.Button("Apply", GUILayout.Height(BUTTON_HEIGHT)))
+                if (GUILayout.Button("Apply", GUILayout.Height(BUTTON_HEIGHT)))
                     buildSettings.Apply();
                 if (GUILayout.Button("Open Player Settings", GUILayout.Height(BUTTON_HEIGHT)))
                     SettingsService.OpenProjectSettings("Project/Player");
