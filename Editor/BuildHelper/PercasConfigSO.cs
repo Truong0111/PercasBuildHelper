@@ -1,10 +1,8 @@
 ﻿using System;
 using System.IO;
 using System.Text.RegularExpressions;
-using Unity.Collections;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 namespace PercasHelper.Editor
 {
@@ -26,13 +24,21 @@ namespace PercasHelper.Editor
         public bool UseCustomKeystore = true;
         public string CustomKeystorePath = Constants.Path.KeyStore;
         public bool SplitApplicationBinary = false;
-        public VersionCodeType VersionCodeType = VersionCodeType.Increase;
         public int VersionMajor = 0;
         public int VersionMinor = 0;
         public int VersionPatch = 1;
         public string VersionName = "0.0.1";
         public int VersionCode;
         public Texture2D IconTexture;
+
+        //
+        public string AppleTargetMinimumIOSVersion = "12.0";
+        public bool AppleEnableAutomaticSigning = true;
+        public string AppleTeamID;
+        public iOSTargetDevice AppleTargetDevice = iOSTargetDevice.iPhoneAndiPad;
+        public iOSSdkVersion AppleSdkVersion = iOSSdkVersion.DeviceSDK;
+        public ScriptCallOptimizationLevel AppleCallOptimizationLevel = ScriptCallOptimizationLevel.SlowAndSafe;
+        public bool AppleHideHomeButton = false;
 
         private const string PercasConfigFileName = "PercasConfig";
         private const string PercasConfigResDir = "Assets/Percas";
@@ -58,11 +64,6 @@ namespace PercasHelper.Editor
             return instance;
         }
 
-        private void Reset()
-        {
-            IconTexture = PlayerSettings.GetIconsForTargetGroup(BuildTargetGroup.Unknown)[0];
-        }
-
         private void OnEnable()
         {
             LoadFromSetting();
@@ -70,6 +71,8 @@ namespace PercasHelper.Editor
 
         public void LoadFromSetting()
         {
+            IconTexture = PlayerSettings.GetIconsForTargetGroup(BuildTargetGroup.Unknown)[0];
+
             ProductName = PlayerSettings.productName;
             if (string.IsNullOrEmpty(ProductName))
                 ProductName = Constants.DefaultProductName;
@@ -77,7 +80,9 @@ namespace PercasHelper.Editor
 #if UNITY_IOS || UNITY_ANDROID
             PackageName = PlayerSettings.applicationIdentifier;
             if (string.IsNullOrEmpty(PackageName))
+            {
                 PackageName = Constants.DefaultPackageName;
+            }
 #endif
 
 #if UNITY_ANDROID
@@ -85,7 +90,9 @@ namespace PercasHelper.Editor
 
             AliasName = PlayerSettings.Android.keyaliasName;
             if (string.IsNullOrEmpty(AliasName))
+            {
                 AliasName = Constants.DefaultAlias;
+            }
 #endif
             VersionName = PlayerSettings.bundleVersion;
 
@@ -127,22 +134,33 @@ namespace PercasHelper.Editor
             }
 
             PlayerSettings.productName = ProductName;
-            PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Android, PackageName);
-#if UNITY_ANDROID
-            PlayerSettings.Android.bundleVersionCode = VersionPatch;
             PlayerSettings.bundleVersion = VersionName;
+
+            // Android
+            PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Android, PackageName);
+            PlayerSettings.Android.bundleVersionCode = VersionCode;
             PlayerSettings.Android.useCustomKeystore = UseCustomKeystore;
             if (UseCustomKeystore)
             {
                 PlayerSettings.Android.keystoreName = CustomKeystorePath;
             }
-
             PlayerSettings.Android.keyaliasName = AliasName;
             PlayerSettings.Android.keyaliasPass = GetKeyStore();
             PlayerSettings.Android.keystorePass = GetKeyStore();
             PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64 | AndroidArchitecture.ARMv7;
             PlayerSettings.Android.useAPKExpansionFiles = SplitApplicationBinary;
-#endif
+
+            // IOS
+            PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.iOS, PackageName);
+            PlayerSettings.iOS.buildNumber = VersionCode.ToString();
+
+            PlayerSettings.iOS.targetOSVersionString = AppleTargetMinimumIOSVersion;
+            PlayerSettings.iOS.appleEnableAutomaticSigning = AppleEnableAutomaticSigning;
+            PlayerSettings.iOS.appleDeveloperTeamID = AppleTeamID;
+            PlayerSettings.iOS.targetDevice = AppleTargetDevice;
+            PlayerSettings.iOS.sdkVersion = AppleSdkVersion;
+            PlayerSettings.iOS.scriptCallOptimization = AppleCallOptimizationLevel;
+            PlayerSettings.iOS.hideHomeButton = AppleHideHomeButton;
         }
 
         public void OnVersionChanged()
@@ -190,21 +208,6 @@ namespace PercasHelper.Editor
             }
 
             VersionName = $"{VersionMajor}.{VersionMinor}.{VersionPatch}";
-
-            switch (VersionCodeType)
-            {
-                case VersionCodeType.Increase:
-                    VersionCode = VersionMajor + VersionMinor + VersionPatch;
-                    break;
-                case VersionCodeType.DateTime:
-                    VersionCode = int.Parse(DateTime.Now.ToString("ddMMyyyy"));
-                    break;
-                case VersionCodeType.Semantic:
-                    VersionCode = VersionMajor * 10000 + VersionMinor * 100 + VersionPatch;
-                    break;
-            }
-
-            ConfigBuild.FixSettingBuild();
         }
 
         private bool IsValidVersionName()

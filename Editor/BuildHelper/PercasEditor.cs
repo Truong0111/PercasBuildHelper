@@ -54,6 +54,7 @@ namespace PercasHelper.Editor
                 return;
             }
 
+            buildSettings.LoadFromSetting();
             percasBuilder = CreateInstance<PercasBuilder>();
             CacheReflectionData();
         }
@@ -92,8 +93,13 @@ namespace PercasHelper.Editor
         [MenuItem("Percas/Open build folder", priority = 1)]
         public static void OpenFileBuild() => ConfigBuild.OpenFileBuild();
 
-        [MenuItem("Percas/Build Game &_b", priority = 2)]
-        public static void BuildGame() => ConfigBuild.BuildGame(false);
+        [MenuItem("Percas/Build Game Android", priority = 2)]
+        public static void BuildGameAndroid() =>
+            ConfigBuild.BuildGame(false, BuildOptions.None, false, "", BuildTarget.Android);
+
+        [MenuItem("Percas/Build Game iOS", priority = 3)]
+        public static void BuildGameIOS() =>
+            ConfigBuild.BuildGame(false, BuildOptions.None, false, "", BuildTarget.iOS);
 
         #endregion
 
@@ -138,11 +144,11 @@ namespace PercasHelper.Editor
             {
                 DrawTextField("Product Name", ref buildSettings.ProductName);
                 DrawTextField("Package Name", ref buildSettings.PackageName);
-                DrawTextField("Alias Name", ref buildSettings.AliasName);
-
-                DrawPasswordForKeyStore();
-                DrawCustomKeystore();
-                DrawSplitApplicationBinary();
+#if UNITY_ANDROID
+                DrawAndroidSettings();
+#elif UNITY_IOS
+                DrawIOSSettings();
+#endif
             });
 
             DrawSection("Version Management", () =>
@@ -150,7 +156,6 @@ namespace PercasHelper.Editor
                 DrawIntField("Major Version", ref buildSettings.VersionMajor);
                 DrawIntField("Minor Version", ref buildSettings.VersionMinor);
                 DrawIntField("Patch Version", ref buildSettings.VersionPatch);
-                DrawEnumField("Version Code Type", ref buildSettings.VersionCodeType);
 
                 using (new EditorGUI.DisabledScope(true))
                     EditorGUILayout.TextField("Version Name", buildSettings.VersionName);
@@ -210,6 +215,32 @@ namespace PercasHelper.Editor
             }
         }
 
+        private void DrawAndroidSettings()
+        {
+            DrawSection("Android Settings", () =>
+            {
+                DrawTextField("Alias Name", ref buildSettings.AliasName);
+
+                DrawPasswordForKeyStore();
+                DrawCustomKeystore();
+                DrawSplitApplicationBinary();
+            });
+        }
+
+        private void DrawIOSSettings()
+        {
+            DrawSection("IOS Settings", () =>
+            {
+                DrawTextField("Minimum IOS Version", ref buildSettings.AppleTargetMinimumIOSVersion);
+                DrawToggleField("Hide Home Button", ref buildSettings.AppleHideHomeButton);
+                DrawToggleField("Automatic Signing", ref buildSettings.AppleEnableAutomaticSigning);
+                DrawTextField("Apple Team ID", ref buildSettings.AppleTeamID);
+                DrawEnumField("Target Device", ref buildSettings.AppleTargetDevice);
+                DrawEnumField("SDK Version", ref buildSettings.AppleSdkVersion);
+                DrawEnumField("Call Optimize Level", ref buildSettings.AppleCallOptimizationLevel);
+            });
+        }
+
         private string GetInitialDirectory(string path)
         {
             if (string.IsNullOrEmpty(path)) return "Assets";
@@ -265,7 +296,6 @@ namespace PercasHelper.Editor
 
         private void DrawCustomActions()
         {
-            /* Placeholder for future settings */
             using (new EditorGUILayout.VerticalScope())
             {
                 if (GUILayout.Button("Apply", GUILayout.Height(BUTTON_HEIGHT)))
@@ -281,7 +311,6 @@ namespace PercasHelper.Editor
 
         private void DrawBuildTab()
         {
-            // EditorGUILayout.LabelField("Build settings and options go here.");
             percasBuilder.OnGUI();
         }
 
