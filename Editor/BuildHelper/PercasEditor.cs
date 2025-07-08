@@ -150,7 +150,6 @@ namespace PercasHelper.Editor
                 DrawIntField("Major Version", ref buildSettings.VersionMajor);
                 DrawIntField("Minor Version", ref buildSettings.VersionMinor);
                 DrawIntField("Patch Version", ref buildSettings.VersionPatch);
-                DrawEnumField("Version Code Type", ref buildSettings.VersionCodeType);
 
                 using (new EditorGUI.DisabledScope(true))
                     EditorGUILayout.TextField("Version Name", buildSettings.VersionName);
@@ -265,7 +264,6 @@ namespace PercasHelper.Editor
 
         private void DrawCustomActions()
         {
-            /* Placeholder for future settings */
             using (new EditorGUILayout.VerticalScope())
             {
                 if (GUILayout.Button("Apply", GUILayout.Height(BUTTON_HEIGHT)))
@@ -281,7 +279,6 @@ namespace PercasHelper.Editor
 
         private void DrawBuildTab()
         {
-            // EditorGUILayout.LabelField("Build settings and options go here.");
             percasBuilder.OnGUI();
         }
 

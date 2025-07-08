@@ -34,6 +34,7 @@ namespace PercasHelper.Editor
 
         #region Fields
 
+        private bool isVersionTypeFileName;
         private bool isCustomBuildFileName;
         private string buildFileName = string.Empty;
 
@@ -81,6 +82,7 @@ namespace PercasHelper.Editor
         {
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
+                // isVersionTypeFileName = EditorGUILayout.Toggle("Version build file name", isVersionTypeFileName);
                 isCustomBuildFileName = EditorGUILayout.Toggle("Use custom name", isCustomBuildFileName);
 
                 if (isCustomBuildFileName)
@@ -154,14 +156,6 @@ namespace PercasHelper.Editor
             {
                 GUILayout.Label("Build Utilities", EditorStyles.boldLabel);
                 EditorGUILayout.Space(2);
-
-                using (new EditorGUILayout.HorizontalScope())
-                {
-                    if (GUILayout.Button("Fix Settings", GUILayout.Height(BUTTON_HEIGHT)))
-                        FixSettings();
-                    if (GUILayout.Button("Create Aab To Apk Command", GUILayout.Height(BUTTON_HEIGHT)))
-                        CreateAabToApkCommand();
-                }
 
                 using (new EditorGUILayout.HorizontalScope())
                 {
@@ -284,8 +278,6 @@ namespace PercasHelper.Editor
 
         #region Utility Methods
 
-        private void FixSettings() => ConfigBuild.FixSettingBuild();
-        private void CreateAabToApkCommand() => ConfigBuild.CreateTemplateCmdConvertFile();
         private void OpenBuildFolder() => ConfigBuild.OpenFileBuild();
 
         private void CleanBuildFolder()

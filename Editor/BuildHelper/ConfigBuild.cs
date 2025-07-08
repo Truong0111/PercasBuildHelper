@@ -161,7 +161,7 @@ namespace PercasHelper.Editor
             SetUpFinalBuild(final);
             string filePath = GetFilePath(isCustomBuildFileName, buildFileName);
             AddBuildFolder(filePath);
-            FixSettingBuild();
+            PercasConfigSo.Apply();
             string[] levels = EditorBuildSettings.scenes.Where(x => x.enabled).Select(scene => scene.path).ToArray();
             var report = BuildPipeline.BuildPlayer(levels, filePath, BuildTarget.Android, buildOptions);
             SetUpFinalBuild(false);
@@ -208,51 +208,20 @@ namespace PercasHelper.Editor
             }
         }
 
-        public static void FixSettingBuild()
-        {
-            _flagChange = false;
-#if UNITY_IOS || UNITY_ANDROID
-            if (!PercasConfigSo.PackageName.Equals(PlayerSettings.applicationIdentifier))
-            {
-                PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Android, PercasConfigSo.PackageName);
-                _flagChange = true;
-            }
-
-            if (!PercasConfigSo.VersionName.Equals(PlayerSettings.bundleVersion))
-            {
-                PlayerSettings.bundleVersion = PercasConfigSo.VersionName;
-                _flagChange = true;
-            }
-#endif
-#if UNITY_ANDROID
-            PlayerSettings.Android.useCustomKeystore = PercasConfigSo.UseCustomKeystore;
-            PlayerSettings.Android.bundleVersionCode = PercasConfigSo.VersionCode;
-            if (PercasConfigSo.UseCustomKeystore)
-            {
-                PlayerSettings.Android.keystoreName = PercasConfigSo.CustomKeystorePath;
-            }
-
-            PlayerSettings.Android.keyaliasName = PercasConfigSo.AliasName;
-            PlayerSettings.Android.keyaliasPass = PercasConfigSo.GetKeyStore();
-            PlayerSettings.Android.keystorePass = PercasConfigSo.GetKeyStore();
-            PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64 | AndroidArchitecture.ARMv7;
-#endif
-            PlayerSettings.productName = PercasConfigSo.ProductName;
-        }
-
         static string GetFilePath(bool isCustomBuildFileName = false, string buildFileName = "")
         {
             if (isCustomBuildFileName)
             {
                 return Path.Combine(Application.dataPath,
-                    $"../Builds/{buildFileName}." + 
+                    $"../Builds/{buildFileName}." +
                     $"{(EditorUserBuildSettings.buildAppBundle ? "aab" : "apk")}");
             }
 
             string gameName = GetValidFileName(PlayerSettings.productName);
             return Path.Combine(Application.dataPath,
-                $"../Builds/{gameName.Replace(" ", "")}_{DateTime.Now:HH-mm-ssTdd-MM-yyyy}." +
-                $"{(EditorUserBuildSettings.buildAppBundle ? "aab" : "apk")}");
+                $"../Builds/{gameName.Replace(" ", "")}_{DateTime.Today:dd-MM-yyyy}" +
+                $"_v{PercasConfigSo.VersionName}_{PercasConfigSo.VersionCode}" +
+                $".{(EditorUserBuildSettings.buildAppBundle ? "aab" : "apk")}");
         }
 
         static string GetValidFileName(string fileName)

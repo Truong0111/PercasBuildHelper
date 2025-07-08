@@ -8,14 +8,6 @@ using UnityEngine.Serialization;
 
 namespace PercasHelper.Editor
 {
-    public enum VersionCodeType
-    {
-        Increase,
-        DateTime,
-        Semantic,
-        Custom
-    }
-
     public class PercasConfigSO : ScriptableObject
     {
         public string ProductName = Constants.DefaultProductName;
@@ -26,7 +18,6 @@ namespace PercasHelper.Editor
         public bool UseCustomKeystore = true;
         public string CustomKeystorePath = Constants.Path.KeyStore;
         public bool SplitApplicationBinary = false;
-        public VersionCodeType VersionCodeType = VersionCodeType.Increase;
         public int VersionMajor = 0;
         public int VersionMinor = 0;
         public int VersionPatch = 1;
@@ -58,11 +49,6 @@ namespace PercasHelper.Editor
             return instance;
         }
 
-        private void Reset()
-        {
-            IconTexture = PlayerSettings.GetIconsForTargetGroup(BuildTargetGroup.Unknown)[0];
-        }
-
         private void OnEnable()
         {
             LoadFromSetting();
@@ -70,14 +56,20 @@ namespace PercasHelper.Editor
 
         public void LoadFromSetting()
         {
+            IconTexture = PlayerSettings.GetIconsForTargetGroup(BuildTargetGroup.Unknown)[0];
+
             ProductName = PlayerSettings.productName;
             if (string.IsNullOrEmpty(ProductName))
+            {
                 ProductName = Constants.DefaultProductName;
+            }
 
 #if UNITY_IOS || UNITY_ANDROID
             PackageName = PlayerSettings.applicationIdentifier;
             if (string.IsNullOrEmpty(PackageName))
+            {
                 PackageName = Constants.DefaultPackageName;
+            }
 #endif
 
 #if UNITY_ANDROID
@@ -85,7 +77,9 @@ namespace PercasHelper.Editor
 
             AliasName = PlayerSettings.Android.keyaliasName;
             if (string.IsNullOrEmpty(AliasName))
+            {
                 AliasName = Constants.DefaultAlias;
+            }
 #endif
             VersionName = PlayerSettings.bundleVersion;
 
@@ -127,10 +121,10 @@ namespace PercasHelper.Editor
             }
 
             PlayerSettings.productName = ProductName;
-            PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Android, PackageName);
-#if UNITY_ANDROID
-            PlayerSettings.Android.bundleVersionCode = VersionPatch;
             PlayerSettings.bundleVersion = VersionName;
+#if UNITY_ANDROID
+            PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Android, PackageName);
+            PlayerSettings.Android.bundleVersionCode = VersionCode;
             PlayerSettings.Android.useCustomKeystore = UseCustomKeystore;
             if (UseCustomKeystore)
             {
@@ -149,7 +143,7 @@ namespace PercasHelper.Editor
         {
             if (!IsValidVersionCode() || !IsValidVersionName())
             {
-                throw new InvalidOperationException($"Invalid version info: {VersionName} ({VersionPatch})");
+                UnityEngine.Debug.LogError($"Invalid version info: {VersionName} ({VersionPatch})");
             }
 
             UpdateVersionCodeAndNameBasedOnVersion();
@@ -190,21 +184,6 @@ namespace PercasHelper.Editor
             }
 
             VersionName = $"{VersionMajor}.{VersionMinor}.{VersionPatch}";
-
-            switch (VersionCodeType)
-            {
-                case VersionCodeType.Increase:
-                    VersionCode = VersionMajor + VersionMinor + VersionPatch;
-                    break;
-                case VersionCodeType.DateTime:
-                    VersionCode = int.Parse(DateTime.Now.ToString("ddMMyyyy"));
-                    break;
-                case VersionCodeType.Semantic:
-                    VersionCode = VersionMajor * 10000 + VersionMinor * 100 + VersionPatch;
-                    break;
-            }
-
-            ConfigBuild.FixSettingBuild();
         }
 
         private bool IsValidVersionName()
