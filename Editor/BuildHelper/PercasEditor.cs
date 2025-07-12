@@ -93,7 +93,7 @@ namespace PercasHelper.Editor
         public static void OpenFileBuild() => ConfigBuild.OpenFileBuild();
 
         [MenuItem("Percas/Build Game &_b", priority = 2)]
-        public static void BuildGame() => ConfigBuild.BuildGame(false);
+        public static void BuildGame() => ConfigBuild.BuildGame(false, true);
 
         #endregion
 

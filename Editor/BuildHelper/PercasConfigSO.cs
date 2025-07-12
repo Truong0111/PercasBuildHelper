@@ -75,6 +75,7 @@ namespace PercasHelper.Editor
 #if UNITY_ANDROID
             PlayerSettings.Android.useCustomKeystore = true;
 
+            VersionCode = PlayerSettings.Android.bundleVersionCode;
             AliasName = PlayerSettings.Android.keyaliasName;
             if (string.IsNullOrEmpty(AliasName))
             {
@@ -82,7 +83,6 @@ namespace PercasHelper.Editor
             }
 #endif
             VersionName = PlayerSettings.bundleVersion;
-
             string[] parts = VersionName.Split('.');
             if (parts.Length >= 3)
             {
@@ -166,6 +166,7 @@ namespace PercasHelper.Editor
             VersionMajor = 0;
             VersionMinor = 0;
             VersionPatch = 1;
+            VersionCode = 0;
             OnVersionChanged();
         }
 

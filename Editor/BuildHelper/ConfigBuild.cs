@@ -154,17 +154,19 @@ namespace PercasHelper.Editor
             }
         }
 
-        public static void BuildGame(bool final, BuildOptions buildOptions = BuildOptions.None,
+        public static void BuildGame(bool final, bool debug, BuildOptions buildOptions = BuildOptions.None,
             bool isCustomBuildFileName = false,
             string buildFileName = "")
         {
             SetUpFinalBuild(final);
+            if (!final) SetupDebugBuild(debug);
             string filePath = GetFilePath(isCustomBuildFileName, buildFileName);
             AddBuildFolder(filePath);
             PercasConfigSo.Apply();
             string[] levels = EditorBuildSettings.scenes.Where(x => x.enabled).Select(scene => scene.path).ToArray();
             var report = BuildPipeline.BuildPlayer(levels, filePath, BuildTarget.Android, buildOptions);
             SetUpFinalBuild(false);
+            SetupDebugBuild(false);
             ConvertAabToApk(report.summary.outputPath);
         }
 
@@ -197,6 +199,30 @@ namespace PercasHelper.Editor
                 }
             }
 #endif
+        }
+
+        private static void SetupDebugBuild(bool debug)
+        {
+            if (debug)
+            {
+                var symbols = PlayerSettings.GetScriptingDefineSymbolsForGroup(BuildTargetGroup.Android).Split(';')
+                    .ToList();
+                if (!symbols.Contains("DEBUG_BUILD"))
+                {
+                    symbols.Add("DEBUG_BUILD");
+                    PlayerSettings.SetScriptingDefineSymbolsForGroup(BuildTargetGroup.Android, symbols.ToArray());
+                }
+            }
+            else
+            {
+                var symbols = PlayerSettings.GetScriptingDefineSymbolsForGroup(BuildTargetGroup.Android).Split(';')
+                    .ToList();
+                if (symbols.Contains("DEBUG_BUILD"))
+                {
+                    symbols.Remove("DEBUG_BUILD");
+                    PlayerSettings.SetScriptingDefineSymbolsForGroup(BuildTargetGroup.Android, symbols.ToArray());
+                }
+            }
         }
 
         private static void AddBuildFolder(string filePath)

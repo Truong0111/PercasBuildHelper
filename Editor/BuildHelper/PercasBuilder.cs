@@ -46,6 +46,7 @@ namespace PercasHelper.Editor
         private bool testMono2X = true;
         private bool testMono2XCleanBuild;
         private bool final;
+        private bool debug;
 
         private string selectedApkPath = string.Empty;
         private int selectedAPKIndex;
@@ -82,7 +83,6 @@ namespace PercasHelper.Editor
         {
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                // isVersionTypeFileName = EditorGUILayout.Toggle("Version build file name", isVersionTypeFileName);
                 isCustomBuildFileName = EditorGUILayout.Toggle("Use custom name", isCustomBuildFileName);
 
                 if (isCustomBuildFileName)
@@ -129,6 +129,7 @@ namespace PercasHelper.Editor
                 GUILayout.Label("Build Actions", EditorStyles.boldLabel);
                 EditorGUILayout.Space(2);
 
+                debug = EditorGUILayout.Toggle("Debug Build", debug);
                 HandleBuildTypeToggle("Test Mono2x", BuildType.Mono2X, ref testMono2X);
                 HandleBuildTypeToggle("Clean Build", BuildType.Mono2XCleanBuild, ref testMono2XCleanBuild);
 
@@ -263,9 +264,8 @@ namespace PercasHelper.Editor
             try
             {
                 var buildOptions = testMono2XCleanBuild ? BuildOptions.CleanBuildCache : BuildOptions.None;
-                ConfigBuild.BuildGame(final, buildOptions, isCustomBuildFileName, buildFileName);
+                ConfigBuild.BuildGame(final, debug, buildOptions, isCustomBuildFileName, buildFileName);
 
-                // Refresh APK list after build
                 EditorApplication.delayCall += RefreshApkList;
             }
             catch (Exception ex)
@@ -320,8 +320,7 @@ namespace PercasHelper.Editor
         {
             string buildsPath = Application.dataPath + BUILDS_FOLDER;
 
-            if (!Directory.Exists(buildsPath))
-                return Enumerable.Empty<string>();
+            if (!Directory.Exists(buildsPath)) return Enumerable.Empty<string>();
 
             try
             {
